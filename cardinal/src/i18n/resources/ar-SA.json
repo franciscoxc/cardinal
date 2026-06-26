@@ -25,6 +25,9 @@
       "code": "شيفرة",
       "app": "تطبيق",
       "folder": "مجلد"
+    },
+    "aria": {
+      "searchInput": "إدخال البحث"
     }
   },
   "stateDisplay": {

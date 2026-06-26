@@ -13,6 +13,7 @@ const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = 
   const props: ComponentProps<typeof SearchBar> = {
     inputRef: createRef<HTMLInputElement>(),
     placeholder: 'Search',
+    ariaLabel: 'Search input',
     value: '',
     onChange: vi.fn(),
     onKeyDown: vi.fn(),

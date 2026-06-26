@@ -25,6 +25,9 @@
       "code": "コード",
       "app": "アプリ",
       "folder": "フォルダ"
+    },
+    "aria": {
+      "searchInput": "検索入力"
     }
   },
   "stateDisplay": {

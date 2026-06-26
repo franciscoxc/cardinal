@@ -25,6 +25,9 @@
       "code": "Código",
       "app": "Aplicación",
       "folder": "Carpeta"
+    },
+    "aria": {
+      "searchInput": "Entrada de búsqueda"
     }
   },
   "stateDisplay": {

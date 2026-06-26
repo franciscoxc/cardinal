@@ -25,6 +25,9 @@
       "code": "Codice",
       "app": "App",
       "folder": "Cartella"
+    },
+    "aria": {
+      "searchInput": "Input di ricerca"
     }
   },
   "stateDisplay": {

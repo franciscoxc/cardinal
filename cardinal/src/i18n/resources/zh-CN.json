@@ -25,6 +25,9 @@
       "code": "代码",
       "app": "应用",
       "folder": "文件夹"
+    },
+    "aria": {
+      "searchInput": "搜索输入"
     }
   },
   "stateDisplay": {

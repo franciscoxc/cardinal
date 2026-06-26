@@ -25,6 +25,9 @@
       "code": "Kod",
       "app": "Uygulama",
       "folder": "Klasör"
+    },
+    "aria": {
+      "searchInput": "Arama girişi"
     }
   },
   "stateDisplay": {

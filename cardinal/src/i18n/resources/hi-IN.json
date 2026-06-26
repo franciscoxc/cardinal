@@ -25,6 +25,9 @@
       "code": "कोड",
       "app": "ऐप",
       "folder": "फ़ोल्डर"
+    },
+    "aria": {
+      "searchInput": "खोज इनपुट"
     }
   },
   "stateDisplay": {

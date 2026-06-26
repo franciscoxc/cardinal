@@ -25,6 +25,9 @@
       "code": "코드",
       "app": "앱",
       "folder": "폴더"
+    },
+    "aria": {
+      "searchInput": "검색 입력"
     }
   },
   "stateDisplay": {

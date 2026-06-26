@@ -25,6 +25,9 @@
       "code": "Code",
       "app": "App",
       "folder": "Folder"
+    },
+    "aria": {
+      "searchInput": "Search input"
     }
   },
   "stateDisplay": {

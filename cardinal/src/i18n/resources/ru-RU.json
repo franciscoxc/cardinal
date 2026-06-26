@@ -25,6 +25,9 @@
       "code": "Код",
       "app": "Программа",
       "folder": "Папка"
+    },
+    "aria": {
+      "searchInput": "Поле поиска"
     }
   },
   "stateDisplay": {

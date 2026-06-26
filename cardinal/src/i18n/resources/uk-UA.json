@@ -25,6 +25,9 @@
       "code": "Код",
       "app": "Програма",
       "folder": "Тека"
+    },
+    "aria": {
+      "searchInput": "Поле пошуку"
     }
   },
   "stateDisplay": {

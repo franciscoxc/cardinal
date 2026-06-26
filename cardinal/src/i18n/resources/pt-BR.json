@@ -25,6 +25,9 @@
       "code": "Código",
       "app": "Aplicativo",
       "folder": "Pasta"
+    },
+    "aria": {
+      "searchInput": "Entrada de pesquisa"
     }
   },
   "stateDisplay": {
