@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-08-01
 - Add an accessible name to the search input, so assistive technologies can announce it. Thanks to [@dkattan](https://github.com/dkattan) ([#220](https://github.com/cardisoft/cardinal/pull/220)).
 - Add a file-type dropdown next to the search bar. Picking a type writes it into the query (`type:image`), so the control and the search bar never disagree — and the syntax stays visible instead of hidden behind a menu.
 - Add the `type:email` category (`.eml`, `.emlx`, `.emlxpart`, `.msg`, `.mbox`), with `mail`/`message` as synonyms.

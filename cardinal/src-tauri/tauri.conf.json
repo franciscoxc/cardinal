@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Cardinal",
-  "version": "0.1.23",
-  "identifier": "com.cardinal.one",
+  "version": "0.2.0",
+  "identifier": "com.franxc.cardinal",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
