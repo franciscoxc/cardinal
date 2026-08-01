@@ -26,7 +26,7 @@
     "targets": "all",
     "category": "Utilities",
     "macOS": {
-      "signingIdentity": "-",
+      "signingIdentity": "Developer ID Application: Francisco Carrasco (993439K8XB)",
       "minimumSystemVersion": "12.0"
     },
     "icon": [
