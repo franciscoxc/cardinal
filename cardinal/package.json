@@ -8,8 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest --watch=false",
-    "test:watch": "vitest --watch",
+    "test": "NODE_OPTIONS=--no-experimental-webstorage vitest --watch=false",
+    "test:watch": "NODE_OPTIONS=--no-experimental-webstorage vitest --watch",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
