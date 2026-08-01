@@ -4,6 +4,11 @@ import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { SearchBar } from '../SearchBar';
 
+// The bar now labels the file-type dropdown through i18n; keys are enough for these assertions.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
 const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = {}) => {
   const props: ComponentProps<typeof SearchBar> = {
     inputRef: createRef<HTMLInputElement>(),
@@ -23,6 +28,8 @@ const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = 
     caseSensitive: false,
     onToggleCaseSensitive: vi.fn(),
     caseSensitiveLabel: 'Case sensitive',
+    fileTypeEnabled: true,
+    onQueryValueChange: vi.fn(),
     onFocus: vi.fn(),
     onBlur: vi.fn(),
     ...overrides,
@@ -196,5 +203,27 @@ describe('SearchBar', () => {
     expect(document.activeElement).toBe(directoryInput);
     expect(onDirectoryKeyDown).toHaveBeenCalledTimes(1);
     expect(document.activeElement).not.toBe(queryInput);
+  });
+
+  it('writes the picked file type into the query and reflects what is already there', () => {
+    const onQueryValueChange = vi.fn();
+    renderSearchBar({ value: 'informe', onQueryValueChange });
+
+    const select = screen.getByLabelText('search.fileType.label') as HTMLSelectElement;
+    expect(select.value).toBe('');
+
+    fireEvent.change(select, { target: { value: 'image' } });
+    expect(onQueryValueChange).toHaveBeenCalledWith('informe type:image');
+  });
+
+  it('shows a custom entry, and changes nothing, for a query it cannot represent', () => {
+    const onQueryValueChange = vi.fn();
+    renderSearchBar({ value: 'informe !type:image', onQueryValueChange });
+
+    const select = screen.getByLabelText('search.fileType.label') as HTMLSelectElement;
+    expect(select.value).toBe('custom');
+
+    fireEvent.change(select, { target: { value: 'custom' } });
+    expect(onQueryValueChange).not.toHaveBeenCalled();
   });
 });

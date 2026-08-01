@@ -52,6 +52,7 @@ function App() {
     currentQuery,
     currentDirectoryQuery,
     highlightTerms,
+    contentTerms,
     showLoadingUI,
     initialFetchCompleted,
     durationMs,
@@ -262,6 +263,10 @@ function App() {
   }, []);
 
   const selectedIndexSet = useMemo(() => new Set(selectedIndices), [selectedIndices]);
+  const showContentContext = contentTerms.length > 0;
+  const fileRowsWidth = showContentContext
+    ? 'var(--columns-total-with-context)'
+    : 'var(--columns-total)';
 
   const handleRowContextMenu = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>, path: string, rowIndex: number) => {
@@ -289,7 +294,7 @@ function App() {
           <div
             key={`placeholder-${rowIndex}`}
             className="row columns row-loading"
-            style={{ ...rowStyle, width: 'var(--columns-total)' }}
+            style={{ ...rowStyle, width: fileRowsWidth }}
           />
         );
       }
@@ -299,11 +304,13 @@ function App() {
           key={item.path}
           rowIndex={rowIndex}
           item={item}
-          style={{ ...rowStyle, width: 'var(--columns-total)' }}
+          style={{ ...rowStyle, width: fileRowsWidth }}
           isSelected={selectedIndexSet.has(rowIndex)}
           selectedPathsForDrag={selectedPaths}
           caseInsensitive={!caseSensitive}
           highlightTerms={highlightTerms}
+          contentTerms={contentTerms}
+          showContentContext={showContentContext}
           onContextMenu={handleRowContextMenu}
           onSelect={handleRowSelect}
           onOpen={openResultPath}
@@ -314,6 +321,9 @@ function App() {
       handleRowContextMenu,
       handleRowSelect,
       highlightTerms,
+      contentTerms,
+      showContentContext,
+      fileRowsWidth,
       caseSensitive,
       selectedIndexSet,
       selectedPaths,
@@ -335,6 +345,7 @@ function App() {
       ({
         '--w-filename': `${colWidths.filename}px`,
         '--w-path': `${colWidths.path}px`,
+        '--w-context': `${Math.max(420, Math.floor(window.innerWidth * 0.4))}px`,
         '--w-size': `${colWidths.size}px`,
         '--w-modified': `${colWidths.modified}px`,
         '--w-created': `${colWidths.created}px`,
@@ -347,6 +358,13 @@ function App() {
         }px`,
       }) as CSSProperties,
     [colWidths, eventColWidths],
+  );
+
+  // The file-type dropdown rewrites the query text, so it commits like pressing Enter rather than
+  // waiting out the keystroke debounce: a click should show results now.
+  const onFileTypeQueryChange = useCallback(
+    (nextQuery: string) => submitFilesQuery(nextQuery, { immediate: true }),
+    [submitFilesQuery],
   );
 
   const showFullDiskAccessOverlay = fullDiskAccessStatus === 'denied';
@@ -390,6 +408,8 @@ function App() {
           caseSensitive={caseSensitive}
           onToggleCaseSensitive={onToggleCaseSensitive}
           caseSensitiveLabel={caseSensitiveLabel}
+          fileTypeEnabled={activeTab === 'files'}
+          onQueryValueChange={onFileTypeQueryChange}
           onFocus={handleSearchFocus}
           onBlur={handleSearchBlur}
         />
@@ -428,6 +448,9 @@ function App() {
               onSortToggle={handleSortToggle}
               sortDisabled={sortButtonsDisabled}
               sortDisabledTooltip={sortDisabledTooltip}
+              showContentContext={showContentContext}
+              contentTerms={contentTerms}
+              caseInsensitive={!caseSensitive}
             />
           )}
         </div>

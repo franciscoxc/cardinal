@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-08-01
+- Add an accessible name to the search input, so assistive technologies can announce it. Thanks to [@dkattan](https://github.com/dkattan) ([#220](https://github.com/cardisoft/cardinal/pull/220)).
+- Add a file-type dropdown next to the search bar. Picking a type writes it into the query (`type:image`), so the control and the search bar never disagree — and the syntax stays visible instead of hidden behind a menu.
+- Add the `type:email` category (`.eml`, `.emlx`, `.emlxpart`, `.msg`, `.mbox`), with `mail`/`message` as synonyms.
+- Rename "folder scope" to plain "Search in" across all 15 languages.
+- Add a context column for `content:` searches, showing the matching text inside each file with the searched term highlighted.
+- Derive the highlighted content terms from the query parser itself, so negated terms (`!content:`) no longer highlight and `content:"Bearer "` keeps its trailing space.
+- Hydrate result rows in parallel, so icon and content-snippet reads no longer queue up behind each other.
+
 ## 0.1.23 — 2026-03-25
 - Reduce power consumption by expanding the default ignored paths to cover more macOS cache, log, metadata, and runtime directories.
 - Further reduce background work by making the filesystem event watcher honor ignored paths.

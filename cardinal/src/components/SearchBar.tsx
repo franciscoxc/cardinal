@@ -1,6 +1,14 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { ChangeEvent, FocusEventHandler } from 'react';
+import { useTranslation } from 'react-i18next';
 import { hasModifierKey } from '../utils/keyboard';
+import {
+  CUSTOM_FILE_TYPE,
+  FILE_TYPE_VALUES,
+  readFileType,
+  setFileType,
+  type FileTypeValue,
+} from '../utils/fileTypeQuery';
 
 const MACOS_FOLDER_ICON =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAIKADAAQAAAABAAAAIAAAAACshmLzAAADGUlEQVRYCe1XsW4TQRCdPZ9tEsuxiEmTABIFSijpKKClooiEhNKAlJJIFBRUfAEVEgW/QEoKkCiQKEAUNDRE0EBQFKBACbIT49z57pb39rx3Z0exneSiUGSsOe/tzs68ndmZ3RM5oWP2gMrYd9Eud7mQ6e9vRujwutzpH9zvuwVA47W7r78/Gps4fdsRXRqgKPK9ztsn16YWIPMH7IP1APmBQxZA7c7L1celanWR0lpraLRD6XzFXqWkgDGtvW/NlU/3l5euf4BEmEoNbFHOei+gpLVy7uarX18dkaJWWiKshyD6icYddLsQdAuOFCDr4KfYOYwgEumo7W01l5/Nzz2AeAMc0PWk8a22V6SBvVYfixExjAJ2AQ/+GwBDIkC9Xe+NSbGyeGP5i/tiYe4edDYsgMJ2G6FUWNoIZFesdKx46BSoJVACJpDIcW9hzkNwAkC1PWxo2tejgRhqtE+AoC1gtJht4xSxHpC/vi9n6xNyabouk9US4mu3R5+mA76G2FObW758/rkh65vb1GJSPQFQr47LlYvTRn0A4c6o+3pEQIxurVI2Nt6srHOWWWECYHbmjHgB0g87e9hGHNFmj5gK4xRmGGZnJuV9dzQBMHaqJF4YLxuiGI6B9Gg54AuzgKSERVSEtiwlALBsAUhTaLSOBa3QYf9tTbFpntWXAAgiFCYESkX5br6sMeNVhFgyC0wARPS+sT1CVevVuv+3jIkEQIj6q1S+rt8LmQ0Jx3sAAMFec/Ltz5wzPQCO1QORSZGjKcO73ZeG+j/yQBggCwfdxHav46A92qRcPDvxgOnToSlER3UiosjEF500AmkWBPSAOd/hBQdFIe9jmSlOtXhoXrm6ZD0Qtdo7UnZdhAGCuG4pVqu89iRU8ZCTEB6Aq73AXAfRm9aBnUajuVafqJw3wFiSc64Jpvh0S3Cj2VqDnR3aspWnjvaFy0/fPa+UyjPFYl5Lp4mUOp1IWr734+PS1Xn0roI3LACejwQxBa6BmQ4cs+NoHooYdDJPHN6Gf4M3wH7WAEHYL6M8jUOtIQvCfhfwg+aE5B+lBx09YnlGKQAAAABJRU5ErkJggg==';
@@ -23,6 +31,8 @@ type SearchBarProps = {
   caseSensitive: boolean;
   onToggleCaseSensitive: (event: ChangeEvent<HTMLInputElement>) => void;
   caseSensitiveLabel: string;
+  fileTypeEnabled: boolean;
+  onQueryValueChange: (value: string) => void;
   onFocus: FocusEventHandler<HTMLInputElement>;
   onBlur: FocusEventHandler<HTMLInputElement>;
 };
@@ -53,10 +63,27 @@ export function SearchBar({
   caseSensitive,
   onToggleCaseSensitive,
   caseSensitiveLabel,
+  fileTypeEnabled,
+  onQueryValueChange,
   onFocus,
   onBlur,
 }: SearchBarProps): React.JSX.Element {
+  const { t } = useTranslation();
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
+  const fileType = readFileType(value);
+
+  const handleFileTypeChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const next = event.target.value;
+      // Selecting the read-only "custom" entry would have nothing to write; the query already
+      // says something this control cannot express, so leave it untouched.
+      if (next === CUSTOM_FILE_TYPE) {
+        return;
+      }
+      onQueryValueChange(setFileType(value, next as FileTypeValue | ''));
+    },
+    [onQueryValueChange, value],
+  );
 
   useEffect(() => {
     if (directoryScopeOpen) {
@@ -176,6 +203,27 @@ export function SearchBar({
           />
         </div>
         <div className="search-segment search-options">
+          {fileTypeEnabled ? (
+            <label className="search-option file-type-option" title={t('search.fileType.label')}>
+              <span className="sr-only">{t('search.fileType.label')}</span>
+              <select
+                className={`file-type-select${fileType ? ' is-active' : ''}`}
+                value={fileType}
+                onChange={handleFileTypeChange}
+                aria-label={t('search.fileType.label')}
+              >
+                <option value="">{t('search.fileType.all')}</option>
+                {FILE_TYPE_VALUES.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`search.fileType.${option}`)}
+                  </option>
+                ))}
+                {fileType === CUSTOM_FILE_TYPE ? (
+                  <option value={CUSTOM_FILE_TYPE}>{t('search.fileType.custom')}</option>
+                ) : null}
+              </select>
+            </label>
+          ) : null}
           <label className="search-option" title={caseSensitiveLabel}>
             <input
               type="checkbox"

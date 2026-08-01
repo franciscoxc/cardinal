@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "Cerca file e cartelle...",
       "events": "Filtra eventi per percorso o nome...",
-      "directory": "Ambito cartella..."
+      "directory": "Cerca in..."
     },
     "options": {
       "caseSensitive": "Attiva/disattiva distinzione tra maiuscole e minuscole",
-      "directoryScope": "Mostra ambito cartella"
+      "directoryScope": "Attiva ricerca nella cartella"
+    },
+    "fileType": {
+      "label": "Tipo di file",
+      "custom": "Personalizzato",
+      "all": "Tutti i tipi",
+      "image": "Immagine",
+      "video": "Video",
+      "audio": "Audio",
+      "doc": "Documento",
+      "pdf": "PDF",
+      "presentation": "Presentazione",
+      "spreadsheet": "Foglio di calcolo",
+      "email": "Email",
+      "archive": "Archivio",
+      "code": "Codice",
+      "app": "App",
+      "folder": "Cartella"
     },
     "aria": {
       "searchInput": "Input di ricerca"
@@ -18,14 +35,15 @@
     "error": "Errore di ricerca",
     "emptyTitle": "Nessun risultato per \"{{query}}\"",
     "emptyMessage": "Prova a modificare parole chiave o filtri.",
-    "emptyTitleWithDirectory": "Nessun risultato per \"{{query}}\" nell'ambito cartella \"{{directoryQuery}}\""
+    "emptyTitleWithDirectory": "Nessun risultato per \"{{query}}\" in \"{{directoryQuery}}\""
   },
   "columns": {
     "filename": "Nome file",
     "path": "Percorso",
     "size": "Dimensione",
     "modified": "Modificato",
-    "created": "Creato"
+    "created": "Creato",
+    "context": "Context"
   },
   "sorting": {
     "disabled": "L'ordinamento è disattivato. Troppi risultati ({{limit}}+) potrebbero influire sulle prestazioni. Puoi regolare la soglia in Preferenze."
