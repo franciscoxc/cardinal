@@ -3,6 +3,12 @@
   <h1>Cardinal</h1>
   <p>Fastest and most accurate file search app for macOS.</p>
   <p>
+    <a href="https://github.com/franciscoxc/cardinal/releases/download/v0.2.0/Cardinal_0.2.0_aarch64.dmg"><img src="https://img.shields.io/badge/Download-Cardinal%200.2.0%20for%20macOS-D62828?style=for-the-badge&logo=apple&logoColor=white" alt="Download Cardinal 0.2.0 for macOS"></a>
+  </p>
+  <p>
+    Signed and notarized · Apple silicon · macOS 12+
+  </p>
+  <p>
     <a href="#using-cardinal">Using Cardinal</a> ·
     <a href="#building-cardinal">Building Cardinal</a>
   </p>
@@ -17,13 +23,9 @@
 
 ### Download
 
-Use homebrew:
+[**Download Cardinal 0.2.0 for macOS**](https://github.com/franciscoxc/cardinal/releases/download/v0.2.0/Cardinal_0.2.0_aarch64.dmg) — signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper warnings.
 
-```bash
-brew install --cask cardinal-search
-```
-
-You can also grab the latest packaged builds from [GitHub Releases](https://github.com/cardisoft/cardinal/releases/).
+Every build lives in [Releases](https://github.com/franciscoxc/cardinal/releases). Open the DMG, drag Cardinal to Applications, and grant Full Disk Access when macOS asks — Cardinal needs it to index and watch your files.
 
 ### i18n support
 
