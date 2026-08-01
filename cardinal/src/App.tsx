@@ -30,7 +30,6 @@ import { useAppPreferences } from './hooks/useAppPreferences';
 import { useAppWindowListeners } from './hooks/useAppWindowListeners';
 import { useFilesTabEffects } from './hooks/useFilesTabEffects';
 import { useFilesTabState } from './hooks/useFilesTabState';
-import { extractContentTerms } from './utils/contentQuery';
 
 function App() {
   const {
@@ -53,6 +52,7 @@ function App() {
     currentQuery,
     currentDirectoryQuery,
     highlightTerms,
+    contentTerms,
     showLoadingUI,
     initialFetchCompleted,
     durationMs,
@@ -263,7 +263,6 @@ function App() {
   }, []);
 
   const selectedIndexSet = useMemo(() => new Set(selectedIndices), [selectedIndices]);
-  const contentTerms = useMemo(() => extractContentTerms(currentQuery), [currentQuery]);
   const showContentContext = contentTerms.length > 0;
   const fileRowsWidth = showContentContext
     ? 'var(--columns-total-with-context)'
@@ -361,6 +360,13 @@ function App() {
     [colWidths, eventColWidths],
   );
 
+  // The file-type dropdown rewrites the query text, so it commits like pressing Enter rather than
+  // waiting out the keystroke debounce: a click should show results now.
+  const onFileTypeQueryChange = useCallback(
+    (nextQuery: string) => submitFilesQuery(nextQuery, { immediate: true }),
+    [submitFilesQuery],
+  );
+
   const showFullDiskAccessOverlay = fullDiskAccessStatus === 'denied';
   const overlayStatusMessage = isCheckingFullDiskAccess
     ? t('app.fullDiskAccess.status.checking')
@@ -400,6 +406,8 @@ function App() {
           caseSensitive={caseSensitive}
           onToggleCaseSensitive={onToggleCaseSensitive}
           caseSensitiveLabel={caseSensitiveLabel}
+          fileTypeEnabled={activeTab === 'files'}
+          onQueryValueChange={onFileTypeQueryChange}
           onFocus={handleSearchFocus}
           onBlur={handleSearchBlur}
         />

@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "파일과 폴더 검색...",
       "events": "경로 또는 이름으로 이벤트 필터링...",
-      "directory": "폴더 범위..."
+      "directory": "검색 위치..."
     },
     "options": {
       "caseSensitive": "대소문자 구분 검색 전환",
-      "directoryScope": "폴더 범위 전환"
+      "directoryScope": "폴더 내 검색 전환"
+    },
+    "fileType": {
+      "label": "파일 종류",
+      "custom": "사용자 지정",
+      "all": "모든 종류",
+      "image": "이미지",
+      "video": "비디오",
+      "audio": "오디오",
+      "doc": "문서",
+      "pdf": "PDF",
+      "presentation": "프레젠테이션",
+      "spreadsheet": "스프레드시트",
+      "email": "이메일",
+      "archive": "압축 파일",
+      "code": "코드",
+      "app": "앱",
+      "folder": "폴더"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "검색 오류",
     "emptyTitle": "\"{{query}}\"에 대한 결과가 없습니다",
     "emptyMessage": "키워드나 필터를 조정해 보세요.",
-    "emptyTitleWithDirectory": "폴더 범위 \"{{directoryQuery}}\"에서 \"{{query}}\"에 대한 결과가 없습니다"
+    "emptyTitleWithDirectory": "\"{{directoryQuery}}\"에서 \"{{query}}\" 결과가 없습니다"
   },
   "columns": {
     "filename": "파일 이름",

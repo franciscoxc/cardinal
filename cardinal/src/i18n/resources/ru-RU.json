@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "Поиск файлов и папок...",
       "events": "Фильтруйте события по пути или имени...",
-      "directory": "Область папок..."
+      "directory": "Искать в..."
     },
     "options": {
       "caseSensitive": "Включить учет регистра",
-      "directoryScope": "Переключить область папок"
+      "directoryScope": "Переключить поиск в папке"
+    },
+    "fileType": {
+      "label": "Тип файла",
+      "custom": "Другое",
+      "all": "Все типы",
+      "image": "Изображение",
+      "video": "Видео",
+      "audio": "Аудио",
+      "doc": "Документ",
+      "pdf": "PDF",
+      "presentation": "Презентация",
+      "spreadsheet": "Таблица",
+      "email": "Письмо",
+      "archive": "Архив",
+      "code": "Код",
+      "app": "Программа",
+      "folder": "Папка"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "Ошибка поиска",
     "emptyTitle": "Нет результатов для \"{{query}}\"",
     "emptyMessage": "Попробуйте изменить ключевые слова или фильтры.",
-    "emptyTitleWithDirectory": "Нет результатов для \"{{query}}\" в области папки \"{{directoryQuery}}\""
+    "emptyTitleWithDirectory": "Нет результатов для \"{{query}}\" в \"{{directoryQuery}}\""
   },
   "columns": {
     "filename": "Имя файла",

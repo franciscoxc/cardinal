@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "फ़ाइलों और फ़ोल्डरों में खोजें...",
       "events": "पथ या नाम से ईवेंट फ़िल्टर करें...",
-      "directory": "फ़ोल्डर स्कोप..."
+      "directory": "इसमें खोजें..."
     },
     "options": {
       "caseSensitive": "केस-सेंसिटिव मिलान टॉगल करें",
-      "directoryScope": "फ़ोल्डर स्कोप टॉगल करें"
+      "directoryScope": "फ़ोल्डर में खोज टॉगल करें"
+    },
+    "fileType": {
+      "label": "फ़ाइल प्रकार",
+      "custom": "कस्टम",
+      "all": "सभी प्रकार",
+      "image": "छवि",
+      "video": "वीडियो",
+      "audio": "ऑडियो",
+      "doc": "दस्तावेज़",
+      "pdf": "PDF",
+      "presentation": "प्रस्तुति",
+      "spreadsheet": "स्प्रेडशीट",
+      "email": "ईमेल",
+      "archive": "संग्रह",
+      "code": "कोड",
+      "app": "ऐप",
+      "folder": "फ़ोल्डर"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "खोज त्रुटि",
     "emptyTitle": "\"{{query}}\" के लिए कोई परिणाम नहीं",
     "emptyMessage": "अपनी कुंजियाँ या फ़िल्टर बदलकर देखिए।",
-    "emptyTitleWithDirectory": "फ़ोल्डर स्कोप \"{{directoryQuery}}\" में \"{{query}}\" के लिए कोई परिणाम नहीं"
+    "emptyTitleWithDirectory": "\"{{directoryQuery}}\" में \"{{query}}\" के लिए कोई परिणाम नहीं"
   },
   "columns": {
     "filename": "फ़ाइल नाम",

@@ -19,12 +19,14 @@ use objc2::{
 use objc2_app_kit::{NSPasteboard, NSPasteboardItem, NSPasteboardTypeString, NSPasteboardWriting};
 use objc2_foundation::{NSArray, NSString, NSURL};
 use parking_lot::Mutex;
+use rayon::prelude::*;
 use search_cache::{
     SearchOptions, SearchOutcome, SearchQuery, SearchResultNode, SlabIndex, SlabNodeMetadata,
+    content_snippet, content_terms_of_query,
 };
 use search_cancel::CancellationToken;
 use serde::{Deserialize, Serialize};
-use std::{cell::LazyCell, fs::File, io::Read, process::Command};
+use std::{cell::LazyCell, process::Command};
 use tauri::{ActivationPolicy, AppHandle, State};
 use tracing::{error, info, warn};
 
@@ -226,6 +228,9 @@ pub struct NodeInfo {
 pub struct SearchResponse {
     pub results: Vec<SlabIndex>,
     pub highlights: Vec<String>,
+    /// `content:` terms of this query, so the UI highlights in a snippet exactly what the search
+    /// looked for inside files.
+    pub content_terms: Vec<String>,
     pub status_code: u8,
 }
 
@@ -293,6 +298,7 @@ pub async fn search(
     search_activity::note_search_activity();
 
     let options = options.unwrap_or_default();
+    let content_terms = query.as_deref().map(content_terms_of_query).unwrap_or_default();
     let cancellation_token = CancellationToken::new_search();
     let (result_tx, result_rx) = bounded(1);
     if let Err(e) = state.search_tx.send(SearchJob {
@@ -327,6 +333,7 @@ pub async fn search(
         SearchResponse {
             results,
             highlights,
+            content_terms,
             status_code,
         }
     })
@@ -346,24 +353,18 @@ pub fn get_nodes_info(
     }
 
     let include_icons = include_icons.unwrap_or(true);
-    let content_terms = content_terms
-        .unwrap_or_default()
-        .into_iter()
-        .map(|term| term.trim().to_string())
-        .filter(|term| !term.is_empty())
-        .collect::<Vec<_>>();
+    let content_terms = content_terms.unwrap_or_default();
     let case_insensitive = case_insensitive.unwrap_or_default();
     let nodes = state.request_nodes(results);
 
+    // Rows are independent, and each one may read a file for its icon and its content snippet.
     nodes
-        .into_iter()
+        .into_par_iter()
         .map(|SearchResultNode { path, metadata }| {
+            let content_context = content_terms
+                .iter()
+                .find_map(|term| content_snippet(&path, term, case_insensitive));
             let path = path.to_string_lossy().into_owned();
-            let content_context = if content_terms.is_empty() {
-                None
-            } else {
-                content_context_for_path(&path, &content_terms, case_insensitive)
-            };
             let icon = if include_icons {
                 fs_icon::icon_of_path_ns(&path).map(|data| {
                     format!(
@@ -411,110 +412,6 @@ pub fn get_sorted_view(
 pub fn update_icon_viewport(id: u64, viewport: Vec<SlabIndex>, state: State<'_, SearchState>) {
     if let Err(e) = state.icon_viewport_tx.send((id, viewport)) {
         error!("Failed to send icon viewport update: {e:?}");
-    }
-}
-
-const CONTENT_CONTEXT_BEFORE_BYTES: usize = 24;
-const CONTENT_CONTEXT_AFTER_BYTES: usize = 160;
-const CONTENT_SNIPPET_BUFFER_BYTES: usize = 64 * 1024;
-
-fn content_context_for_path(
-    path: &str,
-    content_terms: &[String],
-    case_insensitive: bool,
-) -> Option<String> {
-    content_terms
-        .iter()
-        .find_map(|term| content_context_for_term(path, term, case_insensitive))
-}
-
-fn content_context_for_term(path: &str, term: &str, case_insensitive: bool) -> Option<String> {
-    let needle = if case_insensitive {
-        term.to_ascii_lowercase().into_bytes()
-    } else {
-        term.as_bytes().to_vec()
-    };
-    if needle.is_empty() {
-        return None;
-    }
-
-    let mut file = File::open(path).ok()?;
-    let max_context_bytes = CONTENT_CONTEXT_BEFORE_BYTES.max(CONTENT_CONTEXT_AFTER_BYTES);
-    let overlap = needle.len().saturating_sub(1).max(max_context_bytes);
-    let mut buffer = vec![0u8; CONTENT_SNIPPET_BUFFER_BYTES + overlap];
-    let mut carry_len = 0usize;
-    let mut consumed_bytes = 0usize;
-
-    loop {
-        let read = file.read(&mut buffer[carry_len..]).ok()?;
-        if read == 0 {
-            return None;
-        }
-
-        let chunk_len = carry_len + read;
-        let chunk = &buffer[..chunk_len];
-        let mut searchable;
-        let haystack = if case_insensitive {
-            searchable = chunk.to_vec();
-            searchable.make_ascii_lowercase();
-            searchable.as_slice()
-        } else {
-            chunk
-        };
-
-        if let Some(match_index) = find_bytes(haystack, &needle) {
-            let before_start = match_index.saturating_sub(CONTENT_CONTEXT_BEFORE_BYTES);
-            let after_end =
-                (match_index + needle.len() + CONTENT_CONTEXT_AFTER_BYTES).min(chunk_len);
-            let mut snippet = chunk[before_start..after_end].to_vec();
-
-            let desired_after = match_index + needle.len() + CONTENT_CONTEXT_AFTER_BYTES;
-            let mut has_suffix = after_end < chunk_len;
-            if desired_after > chunk_len {
-                let mut extra = vec![0u8; desired_after - chunk_len];
-                if let Ok(extra_read) = file.read(&mut extra) {
-                    snippet.extend_from_slice(&extra[..extra_read]);
-                    has_suffix = extra_read == extra.len();
-                }
-            }
-
-            let chunk_start = consumed_bytes.saturating_sub(carry_len);
-            let absolute_match_index = chunk_start + match_index;
-            let has_prefix = absolute_match_index > CONTENT_CONTEXT_BEFORE_BYTES;
-            return Some(format_context_snippet(snippet, has_prefix, has_suffix));
-        }
-
-        let keep = overlap.min(chunk_len);
-        if keep > 0 {
-            let start = chunk_len - keep;
-            buffer.copy_within(start..chunk_len, 0);
-        }
-        consumed_bytes += read;
-        carry_len = keep;
-    }
-}
-
-fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-    haystack
-        .windows(needle.len())
-        .position(|window| window == needle)
-}
-
-fn format_context_snippet(snippet: Vec<u8>, has_prefix: bool, has_suffix: bool) -> String {
-    let normalized = String::from_utf8_lossy(&snippet)
-        .chars()
-        .map(|ch| match ch {
-            '\r' | '\n' | '\t' => ' ',
-            _ => ch,
-        })
-        .collect::<String>();
-    let compact = normalized.split_whitespace().collect::<Vec<_>>().join(" ");
-
-    match (has_prefix, has_suffix) {
-        (true, true) => format!("...{compact}..."),
-        (true, false) => format!("...{compact}"),
-        (false, true) => format!("{compact}..."),
-        (false, false) => compact,
     }
 }
 

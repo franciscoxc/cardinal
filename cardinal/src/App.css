@@ -356,6 +356,55 @@ main,
   font-size: 0.78rem;
 }
 
+/* Native <select>: the popup, keyboard handling and RTL layout come from the platform. Only the
+   default macOS chrome is stripped so it reads as part of the toolbar. */
+.file-type-select {
+  appearance: none;
+  max-width: 9rem;
+  height: 1.8rem;
+  padding: 0 1.1rem 0 0.5rem;
+  border: none;
+  border-radius: 0.55rem;
+  background-color: transparent;
+  /* Chevron drawn inline so no asset is needed; currentColor keeps it on-theme. */
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 0.5rem top 55%,
+    right 0.26rem top 55%;
+  background-size:
+    0.24rem 0.24rem,
+    0.24rem 0.24rem;
+  background-repeat: no-repeat;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.file-type-select:hover {
+  background-color: var(--search-toggle-hover-bg);
+}
+
+/* Active filter reads like the case toggle when it is on. React sets the value as a DOM property,
+   not an attribute, so this needs a class rather than a [value] selector. */
+.file-type-select.is-active {
+  color: var(--color-accent);
+}
+
+.file-type-select:focus-visible {
+  outline: 2px solid rgba(var(--color-accent-rgb), 0.5);
+  outline-offset: 2px;
+}
+
+.file-type-select option {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
 .search-option input:focus-visible + .search-option__display {
   outline: 2px solid rgba(var(--color-accent-rgb), 0.5);
   outline-offset: 2px;

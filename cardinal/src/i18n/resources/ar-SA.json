@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "ابحث عن الملفات والمجلدات...",
       "events": "رشّح الأحداث حسب المسار أو الاسم...",
-      "directory": "نطاق المجلد..."
+      "directory": "البحث في..."
     },
     "options": {
       "caseSensitive": "تفعيل/إيقاف حساسية حالة الأحرف",
-      "directoryScope": "تبديل نطاق المجلد"
+      "directoryScope": "تبديل البحث في المجلد"
+    },
+    "fileType": {
+      "label": "نوع الملف",
+      "custom": "مخصص",
+      "all": "كل الأنواع",
+      "image": "صورة",
+      "video": "فيديو",
+      "audio": "صوت",
+      "doc": "مستند",
+      "pdf": "PDF",
+      "presentation": "عرض تقديمي",
+      "spreadsheet": "جدول بيانات",
+      "email": "بريد",
+      "archive": "أرشيف",
+      "code": "شيفرة",
+      "app": "تطبيق",
+      "folder": "مجلد"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "خطأ في البحث",
     "emptyTitle": "لا نتائج لـ \"{{query}}\"",
     "emptyMessage": "جرّب تعديل الكلمات المفتاحية أو عوامل التصفية.",
-    "emptyTitleWithDirectory": "لا نتائج لـ \"{{query}}\" ضمن نطاق المجلد \"{{directoryQuery}}\""
+    "emptyTitleWithDirectory": "لا توجد نتائج لـ \"{{query}}\" في \"{{directoryQuery}}\""
   },
   "columns": {
     "filename": "اسم الملف",

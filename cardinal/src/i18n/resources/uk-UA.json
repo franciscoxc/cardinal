@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "Пошук файлів і папок...",
       "events": "Фільтруйте події за шляхом чи назвою...",
-      "directory": "Область папок..."
+      "directory": "Шукати в..."
     },
     "options": {
       "caseSensitive": "Перемкнути врахування регістру",
-      "directoryScope": "Перемкнути область папок"
+      "directoryScope": "Перемкнути пошук у теці"
+    },
+    "fileType": {
+      "label": "Тип файлу",
+      "custom": "Інше",
+      "all": "Усі типи",
+      "image": "Зображення",
+      "video": "Відео",
+      "audio": "Аудіо",
+      "doc": "Документ",
+      "pdf": "PDF",
+      "presentation": "Презентація",
+      "spreadsheet": "Таблиця",
+      "email": "Лист",
+      "archive": "Архів",
+      "code": "Код",
+      "app": "Програма",
+      "folder": "Тека"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "Помилка пошуку",
     "emptyTitle": "Немає результатів для «{{query}}»",
     "emptyMessage": "Спробуйте змінити ключові слова чи фільтри.",
-    "emptyTitleWithDirectory": "Немає результатів для «{{query}}» в області папки «{{directoryQuery}}»"
+    "emptyTitleWithDirectory": "Немає результатів для \"{{query}}\" у \"{{directoryQuery}}\""
   },
   "columns": {
     "filename": "Назва файла",

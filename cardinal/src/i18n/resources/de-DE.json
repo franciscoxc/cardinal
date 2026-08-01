@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "Nach Dateien und Ordnern suchen...",
       "events": "Ereignisse nach Pfad oder Name filtern...",
-      "directory": "Ordnerbereich..."
+      "directory": "Suchen in..."
     },
     "options": {
       "caseSensitive": "Groß-/Kleinschreibung beachten",
-      "directoryScope": "Ordnerbereich umschalten"
+      "directoryScope": "Suche im Ordner umschalten"
+    },
+    "fileType": {
+      "label": "Dateityp",
+      "custom": "Benutzerdefiniert",
+      "all": "Alle Typen",
+      "image": "Bild",
+      "video": "Video",
+      "audio": "Audio",
+      "doc": "Dokument",
+      "pdf": "PDF",
+      "presentation": "Präsentation",
+      "spreadsheet": "Tabelle",
+      "email": "E-Mail",
+      "archive": "Archiv",
+      "code": "Code",
+      "app": "App",
+      "folder": "Ordner"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "Suchfehler",
     "emptyTitle": "Keine Ergebnisse für \"{{query}}\"",
     "emptyMessage": "Passe deine Suchbegriffe oder Filter an.",
-    "emptyTitleWithDirectory": "Keine Ergebnisse für \"{{query}}\" im Ordnerbereich \"{{directoryQuery}}\""
+    "emptyTitleWithDirectory": "Keine Ergebnisse für \"{{query}}\" in \"{{directoryQuery}}\""
   },
   "columns": {
     "filename": "Dateiname",

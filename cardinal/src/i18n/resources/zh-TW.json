@@ -3,11 +3,28 @@
     "placeholder": {
       "files": "搜尋檔案和資料夾…",
       "events": "依路徑或名稱篩選事件…",
-      "directory": "限定資料夾範圍…"
+      "directory": "在此處搜尋..."
     },
     "options": {
       "caseSensitive": "切換區分大小寫比對",
-      "directoryScope": "切換資料夾範圍"
+      "directoryScope": "切換在資料夾中搜尋"
+    },
+    "fileType": {
+      "label": "檔案類型",
+      "custom": "自訂",
+      "all": "所有類型",
+      "image": "圖片",
+      "video": "影片",
+      "audio": "音訊",
+      "doc": "文件",
+      "pdf": "PDF",
+      "presentation": "簡報",
+      "spreadsheet": "試算表",
+      "email": "郵件",
+      "archive": "壓縮檔",
+      "code": "程式碼",
+      "app": "應用程式",
+      "folder": "資料夾"
     }
   },
   "stateDisplay": {
@@ -15,7 +32,7 @@
     "error": "搜尋發生錯誤",
     "emptyTitle": "「{{query}}」沒有符合結果",
     "emptyMessage": "試著調整關鍵字或篩選條件。",
-    "emptyTitleWithDirectory": "在資料夾範圍「{{directoryQuery}}」中沒有找到「{{query}}」"
+    "emptyTitleWithDirectory": "在 \"{{directoryQuery}}\" 中沒有 \"{{query}}\" 的結果"
   },
   "columns": {
     "filename": "檔名",
