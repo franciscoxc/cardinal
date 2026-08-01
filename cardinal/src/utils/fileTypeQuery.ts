@@ -36,9 +36,9 @@ const TYPE_TOKEN = /(^|\s)(!?)type:([A-Za-z]+)(?=\s|$)/gi;
 // cannot claim it describes the whole result set.
 const HAS_GROUPING = /[()|]|\bOR\b/i;
 
-// Any `type:` acting as a filter, including the forms TYPE_TOKEN deliberately does not capture
-// (negated, parenthesised). Without this a query like `(type:image | *.png)` would match no token
-// and read as "all types" — the one answer that is certainly wrong.
+// ponytail-keep: this looks redundant next to TYPE_TOKEN and is not. TYPE_TOKEN requires
+// whitespace before `type:`, so `(type:image | *.png)` matches zero tokens and readFileType
+// returned '' — the dropdown showed "All types" for a query that filters to images.
 const MENTIONS_TYPE = /(^|[\s(!])type:/i;
 
 const isKnown = (value: string): value is FileTypeValue =>

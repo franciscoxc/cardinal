@@ -28,7 +28,9 @@ fn collect_content_terms(expr: &Expr, terms: &mut Vec<String>) {
         // A negated branch matches files *lacking* the term, so it has no occurrence to point at.
         Expr::Empty | Expr::Not(_) => {}
         Expr::Term(Term::Filter(filter)) if matches!(filter.kind, FilterKind::Content) => {
-            // Verbatim, no trimming: `content:"Bearer "` searches for the trailing space too.
+            // ponytail-keep: verbatim, no `.trim()`. Trimming looks harmless and is wrong:
+            // `content:"Bearer "` searches for the trailing space, so a trimmed term stops
+            // matching what the engine matched and the snippet lookup finds nothing.
             let Some(value) = filter
                 .argument
                 .as_ref()

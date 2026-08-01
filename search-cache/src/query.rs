@@ -1078,7 +1078,9 @@ pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Optio
     // context of a match that lands at the start of the next one.
     let overlap = needle.len().saturating_sub(1).max(SNIPPET_BEFORE_BYTES);
     let mut buffer = vec![0u8; CONTENT_BUFFER_BYTES + overlap];
-    // Case folding goes to a scratch buffer: the snippet itself must keep the file's original case.
+    // ponytail-keep: the second buffer is not waste. `node_content_matches` right above folds the
+    // chunk in place, which is cheaper and is wrong here: the snippet is cut from these same bytes,
+    // so folding in place returns the matched line entirely in lowercase.
     let mut folded = Vec::new();
     let mut carry_len = 0usize;
     let mut chunk_offset = 0usize;
