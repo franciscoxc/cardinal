@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 — 2026-08-02
 - Fix result rows not following the column order: the header reordered but the rows kept the original layout, so every column's title sat over the wrong content.
 - Fix the four non-filename columns collapsing to their 30px minimum for the whole session when the first render happened before the window had its real size. Only the filename column ever recovered, which left the rest unreadable and too small to drag or resize.
 
