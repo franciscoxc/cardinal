@@ -39,7 +39,7 @@ export function useColumnOrder() {
     defaultValue: DEFAULT_COLUMN_ORDER,
     read: (raw) => {
       const parsed: unknown = JSON.parse(raw);
-      // ponytail-keep: normalize here as well, not only in the option below. useStoredState runs
+      // Normalize here as well, not only in the option below. useStoredState runs
       // `normalize` on write and returns whatever it read verbatim, so an order saved by an older
       // version — or hand-edited in localStorage — reached the grid with unknown or missing
       // columns and the header stopped matching the rows.

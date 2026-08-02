@@ -60,7 +60,7 @@ const removeToken = (query: string, token: string): string =>
 
 const collapse = (query: string) => query.replace(/\s+/g, ' ').trim();
 
-// ponytail-keep: this looks redundant next to the token matching below and is not. A token match
+// This looks redundant next to the token matching below and is not. A token match
 // requires whitespace before `type:`, so `(type:image | *.png)` matched nothing and the dropdown
 // showed "All types" for a query that filters to images. Same for a negated `!type:`.
 const MENTIONS_TYPE = /(^|[\s(!])type:/i;

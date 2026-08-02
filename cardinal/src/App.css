@@ -482,7 +482,7 @@ main,
 }
 
 /* Active filter reads like the case toggle when it is on.
-   ponytail-keep: matched on a class, not `:not([value=''])`. React sets a controlled select's
+   Matched on a class, not `:not([value=''])`. React sets a controlled select's
    value as a DOM property and never writes the attribute, so the attribute selector matches on
    first paint and never updates — the accent colour stays on after switching back to "All". */
 .file-type-select.is-active {
