@@ -909,13 +909,14 @@ button:active:not(:disabled) {
   cursor: pointer;
 }
 
-.sort-button:active:not(:disabled) {
+.sort-button:active:not(.sort-button--disabled) {
   background-color: transparent !important;
 }
 
-.sort-button:disabled {
+.sort-button--disabled {
   opacity: 0.75;
-  cursor: default;
+  /* Still draggable: only sorting is off, so keep the reorder cursor. */
+  cursor: ew-resize;
 }
 
 .sort-button:focus-visible {

@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix columns not being draggable above the sort limit (20,000 results by default). Sorting is switched off there on purpose, but it was doing so with the `disabled` attribute, which swallows mouse events instead of bubbling them — so the press never reached the header cell and reordering died with it. Reordering is a layout choice and has nothing to do with how many results are on screen.
+
 ## 0.3.2 — 2026-08-02
 - Fix result rows not following the column order: the header reordered but the rows kept the original layout, so every column's title sat over the wrong content.
 - Fix the four non-filename columns collapsing to their 30px minimum for the whole session when the first render happened before the window had its real size. Only the filename column ever recovered, which left the rest unreadable and too small to drag or resize.

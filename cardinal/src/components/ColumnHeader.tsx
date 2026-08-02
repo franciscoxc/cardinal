@@ -114,14 +114,18 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
               >
                 <button
                   type="button"
-                  className="sort-button"
+                  className={`sort-button${sortDisabled ? ' sort-button--disabled' : ''}`}
                   onClick={() => {
-                    if (consumeClickAfterDrag()) {
+                    if (consumeClickAfterDrag() || sortDisabled) {
                       return;
                     }
                     onSortToggle(sortKey);
                   }}
-                  disabled={sortDisabled}
+                  // ponytail-keep: aria-disabled, not the `disabled` attribute. A disabled button
+                  // swallows mouse events instead of bubbling them, so above the sort limit
+                  // (20k results) the press never reached the cell and columns could not be
+                  // dragged either — sorting and reordering have nothing to do with each other.
+                  aria-disabled={sortDisabled}
                   aria-pressed={isActive && !sortDisabled}
                   title={title}
                 >

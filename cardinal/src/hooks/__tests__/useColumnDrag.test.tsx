@@ -4,7 +4,13 @@ import { useColumnDrag } from '../useColumnDrag';
 import type { OrderedColumn } from '../useColumnOrder';
 
 // Two header cells side by side, so a drag from one lands on the other.
-function Header({ onColumnMove }: { onColumnMove: (a: OrderedColumn, b: OrderedColumn) => void }) {
+function Header({
+  onColumnMove,
+  sortDisabled = false,
+}: {
+  onColumnMove: (a: OrderedColumn, b: OrderedColumn) => void;
+  sortDisabled?: boolean;
+}) {
   const { draggingColumn, registerCell, onHeaderMouseDown, consumeClickAfterDrag } =
     useColumnDrag(onColumnMove);
   const sorted = vi.fn();
@@ -29,8 +35,9 @@ function Header({ onColumnMove }: { onColumnMove: (a: OrderedColumn, b: OrderedC
           <button
             type="button"
             data-testid={`sort-${column}`}
+            aria-disabled={sortDisabled}
             onClick={() => {
-              if (consumeClickAfterDrag()) {
+              if (consumeClickAfterDrag() || sortDisabled) {
                 return;
               }
               sorted(column);
@@ -94,5 +101,18 @@ describe('useColumnDrag', () => {
     fireEvent.mouseMove(window, { clientX: 150 });
 
     expect(onColumnMove).not.toHaveBeenCalled();
+  });
+
+  it('still reorders when sorting is disabled by the result limit', () => {
+    const onColumnMove = vi.fn();
+    render(<Header onColumnMove={onColumnMove} sortDisabled />);
+
+    // Above the sort limit the button used to carry `disabled`, which swallows mouse events
+    // instead of bubbling them: the press never reached the cell and the column would not move.
+    fireEvent.mouseDown(screen.getByTestId('sort-filename'), { button: 0, clientX: 50 });
+    fireEvent.mouseMove(window, { clientX: 150 });
+    fireEvent.mouseUp(window, { clientX: 150 });
+
+    expect(onColumnMove).toHaveBeenCalledWith('filename', 'size');
   });
 });
