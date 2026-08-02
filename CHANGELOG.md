@@ -1,13 +1,13 @@
 # Changelog
 
-## Unreleased
-- Put the caret in the search field, after a trailing space, once a filter control writes into it. Picking a type used to leave focus on the control, so the next question was whether the search term goes before or after what was written, and whether to add a space.
-- Fix folder totals staying blank after hiding the Size column and showing it again. Rows were cached without the totals and nothing asked for them until the next search.
+## 0.3.4 — 2026-08-02
 - Show how much a folder holds in the Size column, which until now was empty for folders. The total is summed from the index in memory rather than by walking the disk, and only for the rows on screen. Off by default: the app behaves exactly as before until you turn it on in Preferences.
-- Complete a folder total by walking the excluded directories on disk, behind a second preference with a warning. The number grows on screen as the walk proceeds and drops its `+` when it finishes, since a partial sum is already a true lower bound. The walk runs on one thread at background QoS with the disk I/O throttle, the policy Spotlight and Time Machine use, and is cancelled as soon as its row scrolls out of view.
 - Mark a folder total with `+` when it is a lower bound, because part of the folder is unreadable or kept out of the index by the watch configuration. Hovering explains which.
+- Complete a folder total by walking the excluded directories on disk, behind a second preference with a warning. The number grows on screen as the walk proceeds and drops its `+` when it finishes, since a partial sum is already a true lower bound. The walk runs on one thread at background QoS with the disk I/O throttle — the policy Spotlight and Time Machine use — and is cancelled as soon as its row scrolls out of view.
 - Show or hide columns from the header's context menu, the way Finder does. The order and the hidden set are both remembered, and the file name can never be hidden — without it the list is a wall of dates and sizes. The snippet column is only offered while a content search is running.
 - Hiding the snippet column now stops the work behind it: the search no longer reads every visible file to cut a snippet out of it.
+- Put the caret in the search field, after a trailing space, once a filter control writes into it. Picking a type used to leave focus on the control, so the next question was whether the search term goes before or after what was written, and whether to add a space.
+- Fix folder totals staying blank after hiding the Size column and showing it again. Rows were cached without the totals, and nothing asked for them until the next search.
 
 ## 0.3.3 — 2026-08-02
 - Fix columns not being draggable above the sort limit (20,000 results by default). Sorting is switched off there on purpose, but it was doing so with the `disabled` attribute, which swallows mouse events instead of bubbling them — so the press never reached the header cell and reordering died with it. Reordering is a layout choice and has nothing to do with how many results are on screen.
