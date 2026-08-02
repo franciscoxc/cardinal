@@ -19,7 +19,7 @@ describe('useColumnOrder', () => {
     expect(result.current.columnOrder[0]).toBe('size');
 
     act(() => result.current.moveColumn('size', 'created'));
-    expect(result.current.columnOrder.at(-1)).toBe('size');
+    expect(result.current.columnOrder[result.current.columnOrder.length - 1]).toBe('size');
   });
 
   it('persists the order and repairs a stored one that is missing a column', () => {
