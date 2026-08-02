@@ -1060,8 +1060,8 @@ const SNIPPET_AFTER_BYTES: usize = 160;
 /// search matched. Reads in the same chunks with the same finder as
 /// [`SearchCache::node_content_matches`], so a snippet is found wherever the filter found a match.
 //
-// ponytail: no cancellation token; the caller hydrates visible rows only, over files the content
-// filter just read (so the pages are cached). Wire one in if snippets ever run ahead of the search.
+// No cancellation token: the caller hydrates visible rows only, over files the content filter
+// just read, so the pages are cached. Wire one in if snippets ever run ahead of the search.
 pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Option<String> {
     let needle = if case_insensitive {
         term.to_ascii_lowercase().into_bytes()
@@ -1078,7 +1078,7 @@ pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Optio
     // context of a match that lands at the start of the next one.
     let overlap = needle.len().saturating_sub(1).max(SNIPPET_BEFORE_BYTES);
     let mut buffer = vec![0u8; CONTENT_BUFFER_BYTES + overlap];
-    // ponytail-keep: the second buffer is not waste. `node_content_matches` right above folds the
+    // The second buffer is not waste. `node_content_matches` right above folds the
     // chunk in place, which is cheaper and is wrong here: the snippet is cut from these same bytes,
     // so folding in place returns the matched line entirely in lowercase.
     let mut folded = Vec::new();
