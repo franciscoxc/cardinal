@@ -1035,7 +1035,7 @@ impl SearchCache {
         .map(|value| value.get() as i64)
     }
 
-    fn ensure_metadata(&mut self, index: SlabIndex) -> SlabNodeMetadataCompact {
+    pub(crate) fn ensure_metadata(&mut self, index: SlabIndex) -> SlabNodeMetadataCompact {
         let current = self.file_nodes[index].metadata;
         if current.is_some() {
             return current;

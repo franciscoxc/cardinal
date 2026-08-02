@@ -9,7 +9,8 @@ use anyhow::{Context, Result, anyhow};
 use cardinal_sdk::{EventFlag, FsEvent, ScanType, current_event_id};
 use cardinal_syntax::{Expr, Filter, FilterKind, Term, optimize_query, parse_query};
 use fswalk::{
-    Node, NodeMetadata, WalkData, should_ignore_path, walk_it, walk_it_without_root_chain,
+    Node, NodeFileType, NodeMetadata, WalkData, should_ignore_path, walk_it,
+    walk_it_without_root_chain,
 };
 use hashbrown::HashSet;
 use namepool::NamePool;
@@ -46,6 +47,14 @@ pub struct SearchQuery {
     pub directory_query: Option<String>,
     /// File query
     pub query: Option<String>,
+}
+
+/// Result of [`SearchCache::subtree_size`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SubtreeSize {
+    pub bytes: i64,
+    /// A descendant could not be read, so `bytes` is a lower bound.
+    pub unreadable: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -573,6 +582,54 @@ impl SearchCache {
     }
 
     /// Get all subnode indices of a given node index
+    /// Bytes held by everything under `index`, and whether that total is complete.
+    ///
+    /// Only what the index knows about is counted, which is the whole point: it is a walk of the
+    /// in-memory tree, not of the disk. The flag is what keeps that honest — it goes up when a
+    /// descendant could not be read, so a caller can show the number as a lower bound rather than
+    /// as a fact. Content excluded by the watch configuration never entered the index at all and
+    /// cannot be detected from here; that comparison belongs to whoever owns the ignore list.
+    pub fn subtree_size(
+        &mut self,
+        index: SlabIndex,
+        cancel: CancellationToken,
+    ) -> Option<SubtreeSize> {
+        let mut total = SubtreeSize::default();
+        let mut visited = 0usize;
+        self.subtree_size_recursive(index, &mut total, &mut visited, cancel)?;
+        Some(total)
+    }
+
+    fn subtree_size_recursive(
+        &mut self,
+        index: SlabIndex,
+        total: &mut SubtreeSize,
+        visited: &mut usize,
+        cancel: CancellationToken,
+    ) -> Option<()> {
+        // ponytail-keep: collect the children first. Metadata is filled in lazily, which needs
+        // `&mut self`, and holding a borrow of `children` across that call does not compile.
+        let children: Vec<SlabIndex> = self.file_nodes[index].children.iter().copied().collect();
+        for child in children {
+            cancel.is_cancelled_sparse(*visited)?;
+            *visited += 1;
+
+            // Sizes are not read from disk at index time, so an untouched node has none yet.
+            let metadata = self.ensure_metadata(child);
+            match metadata.as_ref() {
+                // Directories carry their own inode size, which is not part of what they hold.
+                Some(metadata) if metadata.r#type() != NodeFileType::Dir => {
+                    total.bytes = total.bytes.saturating_add(metadata.size().max(0));
+                }
+                Some(_) => {}
+                None => total.unreadable = true,
+            }
+
+            self.subtree_size_recursive(child, total, visited, cancel)?;
+        }
+        Some(())
+    }
+
     pub fn all_subnodes(
         &self,
         index: SlabIndex,
@@ -2980,6 +3037,37 @@ mod tests {
         assert_eq!(insensitive.len(), 1);
         let nodes = cache.expand_file_nodes(&insensitive);
         assert!(nodes[0].path.ends_with("notes.txt"));
+    }
+
+    #[test]
+    fn subtree_size_adds_up_what_the_index_knows() {
+        let temp_dir = TempDir::new("subtree_size_adds_up").unwrap();
+        let dir = temp_dir.path();
+        fs::create_dir_all(dir.join("papers/drafts")).unwrap();
+        fs::write(dir.join("papers/a.txt"), vec![b'a'; 1000]).unwrap();
+        fs::write(dir.join("papers/drafts/b.txt"), vec![b'b'; 2500]).unwrap();
+        fs::write(dir.join("loose.txt"), vec![b'c'; 7]).unwrap();
+
+        let mut cache = SearchCache::walk_fs(dir);
+        let papers = guard_indices(cache.search_with_options(
+            "papers",
+            SearchOptions {
+                case_insensitive: true,
+            },
+            CancellationToken::noop(),
+        ));
+        let folder = papers
+            .into_iter()
+            .find(|index| cache.file_nodes[*index].file_type_hint() == NodeFileType::Dir)
+            .expect("the papers directory");
+
+        let total = cache
+            .subtree_size(folder, CancellationToken::noop())
+            .unwrap();
+        // Nested files count; the sibling outside the folder does not, and the directory's own
+        // inode size is not part of what it holds.
+        assert_eq!(total.bytes, 3500);
+        assert!(!total.unreadable);
     }
 
     #[test]
