@@ -7,14 +7,7 @@ const DRAG_THRESHOLD_PX = 4;
 
 type DragState = { column: OrderedColumn; startX: number; moved: boolean };
 
-/**
- * Column reordering on pointer events rather than HTML5 drag-and-drop.
- *
- * ponytail-keep: the `draggable` attribute is not an option here. Tauri's webview claims
- * drag-and-drop natively so the page can receive dropped files, and that swallows dragover/drop:
- * the header showed a translucent copy of the title, the cursor stayed on "copy", and nothing ever
- * landed. Pointer events also give the cursor and the live shuffle that DnD could not.
- */
+/** Column reordering on pointer events rather than HTML5 drag-and-drop. */
 export function useColumnDrag(onColumnMove: (from: OrderedColumn, to: OrderedColumn) => void) {
   const [draggingColumn, setDraggingColumn] = useState<OrderedColumn | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -97,6 +90,11 @@ export function useColumnDrag(onColumnMove: (from: OrderedColumn, to: OrderedCol
       }
     };
 
+    // ponytail-keep: these listeners are what replaces the `draggable` attribute, which is not an
+    // option here. Tauri's webview claims drag-and-drop natively so the page can receive dropped
+    // files, and that swallows dragover/drop: the header showed a translucent copy of the title,
+    // the cursor stayed on "copy", and nothing ever landed. Pointer events also give the cursor
+    // and the live shuffle that DnD could not.
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', finish);
     window.addEventListener('keydown', handleKey);

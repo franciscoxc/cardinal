@@ -582,6 +582,32 @@ impl SearchCache {
     }
 
     /// Get all subnode indices of a given node index
+    /// Whether the watch configuration keeps part of `path`'s contents out of the index.
+    ///
+    /// Asked of the configuration rather than of the tree, because an ignored directory never
+    /// entered the index: from inside, a folder that had one is indistinguishable from a folder
+    /// that never did. The decision is delegated to `should_ignore_path`, the same rule the walker
+    /// applies, so a re-included subtree under an ignored one does not count as missing.
+    pub fn subtree_excluded_by_config(&self, path: &Path) -> bool {
+        let ignore = self.ignore_paths();
+        let include = self.include_paths();
+        ignore.iter().any(|ignored| {
+            ignored.starts_with(path)
+                && ignored.as_path() != path
+                // ponytail-keep: compare against the include list here; do not ask
+                // `should_ignore_path(ignored, ..)`. That answers a different question and answers
+                // it wrongly for this one: when a re-included subtree sits inside an ignored
+                // directory, the walker must descend through the directory to reach it, so the
+                // rule reports the directory as *not* ignored — while still skipping every other
+                // child of it. A folder above it then looked complete when it was not.
+                //
+                // Only an include naming the ignored directory itself puts all of it back. A
+                // deeper include returns a part: for the siblings of that part the deepest ignore
+                // still outranks the deepest include, so they stay out.
+                && !include.iter().any(|included| included == ignored)
+        })
+    }
+
     /// Bytes held by everything under `index`, and whether that total is complete.
     ///
     /// Only what the index knows about is counted, which is the whole point: it is a walk of the
@@ -3040,6 +3066,28 @@ mod tests {
     }
 
     #[test]
+    fn an_include_naming_the_ignored_directory_puts_all_of_it_back() {
+        let temp_dir = TempDir::new("subtree_excluded_exact").unwrap();
+        let dir = temp_dir.path();
+        fs::create_dir_all(dir.join("papers/caches")).unwrap();
+
+        let cache = SearchCache::walk_fs_with_walk_data(
+            &WalkData::new(
+                dir,
+                &[dir.join("papers/caches")],
+                // Re-included by its own name, so nothing under it is skipped after all.
+                &[dir.join("papers/caches")],
+                false,
+                || false,
+            ),
+            &NEVER_STOPPED,
+        )
+        .expect("walk was not cancelled");
+
+        assert!(!cache.subtree_excluded_by_config(&dir.join("papers")));
+    }
+
+    #[test]
     fn subtree_size_adds_up_what_the_index_knows() {
         let temp_dir = TempDir::new("subtree_size_adds_up").unwrap();
         let dir = temp_dir.path();
@@ -3068,6 +3116,34 @@ mod tests {
         // inode size is not part of what it holds.
         assert_eq!(total.bytes, 3500);
         assert!(!total.unreadable);
+    }
+
+    #[test]
+    fn subtree_excluded_by_config_follows_the_walker_rule() {
+        let temp_dir = TempDir::new("subtree_excluded").unwrap();
+        let dir = temp_dir.path();
+        fs::create_dir_all(dir.join("papers/caches/keep")).unwrap();
+        fs::create_dir_all(dir.join("clean")).unwrap();
+
+        let cache = SearchCache::walk_fs_with_walk_data(
+            &WalkData::new(
+                dir,
+                &[dir.join("papers/caches")],
+                &[dir.join("papers/caches/keep")],
+                false,
+                || false,
+            ),
+            &NEVER_STOPPED,
+        )
+        .expect("walk was not cancelled");
+
+        // `caches` is ignored below it, and the re-include only covers part of it, so the
+        // siblings of `keep` stay out and the total is missing something.
+        assert!(cache.subtree_excluded_by_config(&dir.join("papers")));
+        // Nothing ignored under this one.
+        assert!(!cache.subtree_excluded_by_config(&dir.join("clean")));
+        // Nothing ignored below the re-included directory either.
+        assert!(!cache.subtree_excluded_by_config(&dir.join("papers/caches/keep")));
     }
 
     #[test]
