@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-08-02
 - Add "Check for Updates…" to the Cardinal menu. It asks GitHub for the latest release, says whether you are current, and offers the download page only when there is something newer.
 - Fix the Help menu's updates entry, which opened the upstream project's releases rather than this fork's.
 - Add a "Contains" field to the search bar for searching inside files. It writes `content:"…"` into the query, the same way the file-type dropdown writes `type:`.
