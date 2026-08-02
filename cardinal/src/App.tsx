@@ -315,7 +315,7 @@ function App() {
           key={item.path}
           rowIndex={rowIndex}
           item={item}
-          style={{ ...rowStyle, width: fileRowsWidth }}
+          style={{ ...rowStyle, width: fileRowsWidth, gridTemplateColumns: columnsTemplate }}
           isSelected={selectedIndexSet.has(rowIndex)}
           selectedPathsForDrag={selectedPaths}
           caseInsensitive={!caseSensitive}

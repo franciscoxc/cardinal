@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Fix result rows not following the column order: the header reordered but the rows kept the original layout, so every column's title sat over the wrong content.
+- Fix the four non-filename columns collapsing to their 30px minimum for the whole session when the first render happened before the window had its real size. Only the filename column ever recovered, which left the rest unreadable and too small to drag or resize.
+
 ## 0.3.1 — 2026-08-02
 - Fix column reordering, which did not work at all: the header showed a translucent title and dropped nothing. Tauri's webview claims drag-and-drop natively so the page can receive dropped files, which swallows the events HTML5 dragging needs. Reordering now runs on pointer events, and shows the column darkened and shuffling as you drag.
 - Add a clear button to the search field, the "Contains" field, the file-type dropdown and "Search in".

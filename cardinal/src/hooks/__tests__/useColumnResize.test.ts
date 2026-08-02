@@ -223,4 +223,20 @@ describe('useColumnResize', () => {
       filename: availableWidth - fixedWidth,
     });
   });
+
+  it('repairs a layout that collapsed because the window had no size at first render', () => {
+    // Tauri can paint before restoring the window size; every ratio then floors at the minimum
+    // and only filename ever recovered, leaving four 30px columns for the whole session.
+    setWindowWidth(1);
+    const { result } = renderHook(() => useColumnResize());
+    expect(result.current.colWidths.path).toBe(MIN_COL_WIDTH);
+
+    act(() => {
+      setWindowWidth(1400);
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(result.current.colWidths.path).toBeGreaterThan(MIN_COL_WIDTH);
+    expect(result.current.colWidths.modified).toBeGreaterThan(MIN_COL_WIDTH);
+  });
 });

@@ -59,6 +59,14 @@ const calculateAutoColumnWidths = (windowWidth: number): ColumnWidths => {
   return withAutoFilenameWidth(widths, getAvailableWidth(windowWidth));
 };
 
+// True when the ratio layout collapsed: every fixed column sits at the floor, which the ratios
+// only produce for an absurdly narrow window.
+const isCollapsed = (widths: ColumnWidths) =>
+  widths.path === MIN_COL_WIDTH &&
+  widths.size === MIN_COL_WIDTH &&
+  widths.modified === MIN_COL_WIDTH &&
+  widths.created === MIN_COL_WIDTH;
+
 const resizeForWindowWidth = (prev: ColumnResizeState, available: number): ColumnResizeState => {
   // Manual mode means the user owns every column width. A window resize should
   // not disturb those widths unless the viewport is resized back near the
@@ -68,6 +76,15 @@ const resizeForWindowWidth = (prev: ColumnResizeState, available: number): Colum
     Math.abs(available - getTotalWidth(prev.widths)) > AUTO_SNAP_THRESHOLD
   ) {
     return prev;
+  }
+
+  // ponytail-keep: re-derive from the ratios, do not just stretch filename. The first render can
+  // happen before the window has its real size — Tauri restores window state after creating it —
+  // and then every ratio floors at MIN_COL_WIDTH. Since this handler only ever recomputed
+  // filename, the other four stayed 30px wide for the rest of the session: unreadable, and far
+  // too small a target to drag or resize.
+  if (prev.mode === 'autoFilename' && isCollapsed(prev.widths) && available > MIN_COL_WIDTH * 10) {
+    return { mode: 'autoFilename', widths: calculateAutoColumnWidths(window.innerWidth) };
   }
 
   const widths = withAutoFilenameWidth(prev.widths, available);
@@ -116,7 +133,13 @@ export function useColumnResize() {
       });
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // The window may never fire a resize if it was created at its final size after the first
+    // paint, so repair the collapsed layout once on the next frame too.
+    const frame = requestAnimationFrame(handleResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const clampWidth = useCallback(
