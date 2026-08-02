@@ -97,6 +97,28 @@ export function SearchBar({
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const fileType = readFileType(value);
 
+  /// Hands the query back with the caret where the next word goes.
+  ///
+  /// Picking a filter used to leave focus on the control and the caret nowhere, so the next
+  /// question was always "do I type before or after what it wrote, and with a space?". Ending on
+  /// a space and putting the caret there answers it before it is asked.
+  const writeQueryAndResumeTyping = useCallback(
+    (nextQuery: string) => {
+      const withRoom = nextQuery ? `${nextQuery} ` : '';
+      onQueryValueChange(withRoom);
+      // After the re-render, or the caret lands in the value React is about to replace.
+      requestAnimationFrame(() => {
+        const input = inputRef.current;
+        if (!input) {
+          return;
+        }
+        input.focus();
+        input.setSelectionRange(withRoom.length, withRoom.length);
+      });
+    },
+    [inputRef, onQueryValueChange],
+  );
+
   const handleFileTypeChange = useCallback(
     (event: ChangeEvent<HTMLSelectElement>) => {
       const next = event.target.value;
@@ -105,9 +127,9 @@ export function SearchBar({
       if (next === CUSTOM) {
         return;
       }
-      onQueryValueChange(setFileType(value, next as FileTypeValue | ''));
+      writeQueryAndResumeTyping(setFileType(value, next as FileTypeValue | ''));
     },
-    [onQueryValueChange, value],
+    [value, writeQueryAndResumeTyping],
   );
 
   const contentTerm = readContentTerm(value);

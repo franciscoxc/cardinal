@@ -248,7 +248,9 @@ describe('SearchBar', () => {
     expect(select.value).toBe('');
 
     fireEvent.change(select, { target: { value: 'image' } });
-    expect(onQueryValueChange).toHaveBeenCalledWith('informe type:image');
+    // Ends on a space, and the caret goes there: picking a filter should not leave the user
+    // wondering whether their term goes before or after what the control wrote.
+    expect(onQueryValueChange).toHaveBeenCalledWith('informe type:image ');
   });
 
   it('shows a custom entry, and changes nothing, for a query it cannot represent', () => {
@@ -260,5 +262,18 @@ describe('SearchBar', () => {
 
     fireEvent.change(select, { target: { value: 'custom' } });
     expect(onQueryValueChange).not.toHaveBeenCalled();
+  });
+
+  it('puts the caret after the filter it wrote, ready for the search term', async () => {
+    const queryRef = createRef<HTMLInputElement>();
+    renderSearchBar({ inputRef: queryRef, value: 'informe', onQueryValueChange: vi.fn() });
+
+    fireEvent.change(screen.getByLabelText('search.fileType.label'), {
+      target: { value: 'image' },
+    });
+
+    await waitFor(() => expect(document.activeElement).toBe(queryRef.current));
+    const caret = queryRef.current?.selectionStart;
+    expect(caret).toBe(queryRef.current?.value.length);
   });
 });

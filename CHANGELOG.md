@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Put the caret in the search field, after a trailing space, once a filter control writes into it. Picking a type used to leave focus on the control, so the next question was whether the search term goes before or after what was written, and whether to add a space.
 - Fix folder totals staying blank after hiding the Size column and showing it again. Rows were cached without the totals and nothing asked for them until the next search.
 - Show how much a folder holds in the Size column, which until now was empty for folders. The total is summed from the index in memory rather than by walking the disk, and only for the rows on screen. Off by default: the app behaves exactly as before until you turn it on in Preferences.
 - Complete a folder total by walking the excluded directories on disk, behind a second preference with a warning. The number grows on screen as the walk proceeds and drops its `+` when it finishes, since a partial sum is already a true lower bound. The walk runs on one thread at background QoS with the disk I/O throttle, the policy Spotlight and Time Machine use, and is cancelled as soon as its row scrolls out of view.
