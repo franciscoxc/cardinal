@@ -168,6 +168,10 @@
       "label": "Mostrar tamanho das pastas",
       "hint": "Soma o que cada pasta visível contém. Um total que não pode ser completo é marcado com +.",
       "needsColumn": "Requer a coluna Tamanho, que está oculta."
+    },
+    "deepFolderSizes": {
+      "label": "Incluir pastas excluídas no total",
+      "warning": "⚠︎ Percorre os caches e pastas na nuvem deixados fora do índice. Pode deixar o sistema lento e consumir mais bateria. A varredura roda na prioridade mais baixa e cede a tudo mais."
     }
   },
   "language": {

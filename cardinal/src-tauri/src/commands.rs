@@ -65,6 +65,9 @@ pub struct NodeInfoRequest {
     /// Only the rows on screen ask for folder sizes: the sum walks the subtree, so asking for
     /// every result would traverse the whole index on each keystroke.
     pub folder_sizes: bool,
+    /// Also walk the excluded directories on disk to complete those totals. Expensive by
+    /// definition — these are the paths left out to save battery — so it is opt-in twice over.
+    pub deep_folder_sizes: bool,
     pub response_tx: Sender<NodeInfoResponse>,
 }
 
@@ -121,10 +124,15 @@ impl SearchState {
     }
 
     fn request_nodes(&self, slab_indices: Vec<SlabIndex>) -> Vec<SearchResultNode> {
-        self.request_node_info(slab_indices, false).nodes
+        self.request_node_info(slab_indices, false, false).nodes
     }
 
-    fn request_node_info(&self, slab_indices: Vec<SlabIndex>, folder_sizes: bool) -> NodeInfoResponse {
+    fn request_node_info(
+        &self,
+        slab_indices: Vec<SlabIndex>,
+        folder_sizes: bool,
+        deep_folder_sizes: bool,
+    ) -> NodeInfoResponse {
         let empty = || NodeInfoResponse {
             nodes: Vec::new(),
             folder_sizes: Vec::new(),
@@ -137,6 +145,7 @@ impl SearchState {
         if let Err(e) = self.node_info_tx.send(NodeInfoRequest {
             slab_indices,
             folder_sizes,
+            deep_folder_sizes,
             response_tx,
         }) {
             error!("Failed to send node info request: {e:?}");
@@ -381,6 +390,7 @@ pub fn get_nodes_info(
     content_terms: Option<Vec<String>>,
     case_insensitive: Option<bool>,
     folder_sizes: Option<bool>,
+    deep_folder_sizes: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Vec<NodeInfo> {
     if results.is_empty() {
@@ -393,7 +403,11 @@ pub fn get_nodes_info(
     let NodeInfoResponse {
         nodes,
         folder_sizes,
-    } = state.request_node_info(results, folder_sizes.unwrap_or_default());
+    } = state.request_node_info(
+        results,
+        folder_sizes.unwrap_or_default(),
+        deep_folder_sizes.unwrap_or_default(),
+    );
 
     // Rows are independent, and each one may read a file for its icon and its content snippet.
     nodes

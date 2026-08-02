@@ -1,9 +1,9 @@
 import { useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { subscribeIconUpdate } from '../runtime/tauriEventRuntime';
+import { subscribeFolderSizeUpdate, subscribeIconUpdate } from '../runtime/tauriEventRuntime';
 import type { NodeInfoResponse, SearchResultItem } from '../types/search';
 import type { SlabIndex } from '../types/slab';
-import type { IconUpdatePayload } from '../types/ipc';
+import type { FolderSizeUpdatePayload, IconUpdatePayload } from '../types/ipc';
 
 export type DataLoaderCache = Map<SlabIndex, SearchResultItem>;
 type IconOverrideValue = string | undefined;
@@ -28,6 +28,7 @@ export function useDataLoader(
   contentTerms: readonly string[] = [],
   caseInsensitive = false,
   folderSizes = false,
+  deepFolderSizes = false,
 ) {
   const loadingRef = useRef<Set<SlabIndex>>(new Set());
   // Monotonic epoch for range-load requests. A new search result-set bumps this value so
@@ -44,10 +45,12 @@ export function useDataLoader(
   const contentTermsRef = useRef<readonly string[]>([]);
   const caseInsensitiveRef = useRef(caseInsensitive);
   const folderSizesRef = useRef(folderSizes);
+  const deepFolderSizesRef = useRef(deepFolderSizes);
   resultsRef.current = results;
   contentTermsRef.current = contentTerms;
   caseInsensitiveRef.current = caseInsensitive;
   folderSizesRef.current = folderSizes;
+  deepFolderSizesRef.current = deepFolderSizes;
 
   // Reset cache state whenever the backing result-set changes so slab-index reuse in the
   // backend cannot surface stale row data for a newer search result-set.
@@ -97,6 +100,46 @@ export function useDataLoader(
     return unlistenIconUpdate;
   }, []);
 
+  useEffect(() => {
+    const unlisten = subscribeFolderSizeUpdate((updates: readonly FolderSizeUpdatePayload[]) => {
+      if (updates.length === 0) {
+        return;
+      }
+
+      setCache((prev) => {
+        let nextCache: DataLoaderCache | null = null;
+
+        updates.forEach(({ slabIndex, bytes, done }) => {
+          const current = prev.get(slabIndex as SlabIndex);
+          // A row that scrolled away is gone from the cache; its walk was cancelled anyway.
+          if (!current) {
+            return;
+          }
+          // The walk only ever adds, so an update that would shrink the number is a straggler
+          // from a previous generation and is dropped rather than shown.
+          if ((current.folderSize ?? 0) > bytes) {
+            return;
+          }
+
+          nextCache ??= new Map(prev);
+          nextCache.set(slabIndex as SlabIndex, {
+            ...current,
+            folderSize: bytes,
+            folderSizeIncomplete: !done,
+          });
+        });
+
+        if (nextCache === null) {
+          return prev;
+        }
+
+        cacheRef.current = nextCache;
+        return nextCache;
+      });
+    });
+    return unlisten;
+  }, []);
+
   const releaseLoadingBatch = useCallback((slabIndices: readonly SlabIndex[]) => {
     slabIndices.forEach((slabIndex) => loadingRef.current.delete(slabIndex));
   }, []);
@@ -122,6 +165,7 @@ export function useDataLoader(
         contentTerms: contentTermsRef.current,
         caseInsensitive: caseInsensitiveRef.current,
         folderSizes: folderSizesRef.current,
+        deepFolderSizes: deepFolderSizesRef.current,
       });
       if (versionRef.current !== versionAtRequest) {
         // The result-set changed while this request was in flight. Drop the payload instead of

@@ -205,6 +205,8 @@ function App() {
     defaultIncludePaths,
     folderSizesEnabled,
     setFolderSizesEnabled,
+    deepFolderSizesEnabled,
+    setDeepFolderSizesEnabled,
     preferencesResetToken,
     handleWatchConfigChange,
     handleResetPreferences,
@@ -299,6 +301,8 @@ function App() {
   // whether there is anywhere to put the answer.
   const sizeColumnVisible = visibleColumns.includes('size');
   const wantFolderSizes = folderSizesEnabled && sizeColumnVisible;
+  // The walk only makes sense on top of the sums it completes.
+  const wantDeepFolderSizes = wantFolderSizes && deepFolderSizesEnabled;
   const columnsTemplate = useMemo(
     () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
     [visibleColumns],
@@ -499,6 +503,7 @@ function App() {
               contentTerms={snippetTerms}
               caseInsensitive={!caseSensitive}
               folderSizes={wantFolderSizes}
+              deepFolderSizes={wantDeepFolderSizes}
               columnOrder={visibleColumns}
               onColumnMove={moveColumn}
               columnsTemplate={columnsTemplate}
@@ -525,6 +530,8 @@ function App() {
         onSortThresholdChange={setSortThreshold}
         folderSizesEnabled={folderSizesEnabled}
         onFolderSizesEnabledChange={setFolderSizesEnabled}
+        deepFolderSizesEnabled={deepFolderSizesEnabled}
+        onDeepFolderSizesEnabledChange={setDeepFolderSizesEnabled}
         sizeColumnVisible={sizeColumnVisible}
         trayIconEnabled={trayIconEnabled}
         onTrayIconEnabledChange={setTrayIconEnabled}

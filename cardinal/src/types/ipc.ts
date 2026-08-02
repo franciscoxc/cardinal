@@ -23,6 +23,13 @@ export type RecentEventPayload = {
   timestamp: number;
 };
 
+export type FolderSizeUpdatePayload = {
+  slabIndex: number;
+  bytes: number;
+  /** The walk finished: the number is a total, not a lower bound. */
+  done: boolean;
+};
+
 export type AppLifecycleStatus = 'Initializing' | 'Updating' | 'Ready';
 
 export enum SearchStatusCode {

@@ -168,6 +168,10 @@
       "label": "Ordnergrößen anzeigen",
       "hint": "Summiert den Inhalt jedes sichtbaren Ordners. Eine Summe, die nicht vollständig sein kann, wird mit + markiert.",
       "needsColumn": "Erfordert die Spalte Größe, die ausgeblendet ist."
+    },
+    "deepFolderSizes": {
+      "label": "Ausgeschlossene Ordner in die Summe einbeziehen",
+      "warning": "⚠︎ Durchläuft die Caches und Cloud-Ordner, die nicht im Index sind. Kann das System verlangsamen und mehr Akku verbrauchen. Der Durchlauf hat die niedrigste Priorität und weicht allem anderen."
     }
   },
   "language": {

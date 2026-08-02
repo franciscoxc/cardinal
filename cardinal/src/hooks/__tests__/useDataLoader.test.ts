@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
-import { subscribeIconUpdate } from '../../runtime/tauriEventRuntime';
+import { subscribeFolderSizeUpdate, subscribeIconUpdate } from '../../runtime/tauriEventRuntime';
 import type { SlabIndex } from '../../types/slab';
 import { useDataLoader } from '../useDataLoader';
 
@@ -11,10 +11,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 vi.mock('../../runtime/tauriEventRuntime', () => ({
   subscribeIconUpdate: vi.fn(),
+  subscribeFolderSizeUpdate: vi.fn(),
 }));
 
 const mockedInvoke = vi.mocked(invoke);
 const mockedSubscribeIconUpdate = vi.mocked(subscribeIconUpdate);
+const mockedSubscribeFolderSize = vi.mocked(subscribeFolderSizeUpdate);
 type HookProps = { results: SlabIndex[]; version: number };
 
 const buildNodeInfo = (slabIndex: SlabIndex) => ({
@@ -188,6 +190,7 @@ describe('useDataLoader', () => {
       contentTerms: ['needle'],
       caseInsensitive: true,
       folderSizes: false,
+      deepFolderSizes: false,
     });
   });
 
@@ -206,5 +209,36 @@ describe('useDataLoader', () => {
       'get_nodes_info',
       expect.objectContaining({ folderSizes: true }),
     );
+  });
+
+  it('grows a folder total as the walk reports, and drops the marker when it finishes', async () => {
+    let emitProgress:
+      | ((updates: { slabIndex: number; bytes: number; done: boolean }[]) => void)
+      | null = null;
+    mockedSubscribeFolderSize.mockImplementation((listener) => {
+      emitProgress = listener as typeof emitProgress;
+      return () => {};
+    });
+    mockedInvoke.mockResolvedValue([
+      { ...buildNodeInfo(11 as SlabIndex), folderSize: 100, folderSizeIncomplete: true },
+    ]);
+
+    const { result } = renderHook(() => useDataLoader([11 as SlabIndex], 1, [], false, true));
+    await act(async () => {
+      await result.current.ensureRangeLoaded(0, 0);
+    });
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSize).toBe(100);
+
+    act(() => emitProgress?.([{ slabIndex: 11, bytes: 900, done: false }]));
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSize).toBe(900);
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSizeIncomplete).toBe(true);
+
+    act(() => emitProgress?.([{ slabIndex: 11, bytes: 1500, done: true }]));
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSize).toBe(1500);
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSizeIncomplete).toBe(false);
+
+    // A straggler from a cancelled walk would otherwise make the number jump backwards.
+    act(() => emitProgress?.([{ slabIndex: 11, bytes: 300, done: true }]));
+    expect(result.current.cache.get(11 as SlabIndex)?.folderSize).toBe(1500);
   });
 });

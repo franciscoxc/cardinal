@@ -168,6 +168,10 @@
       "label": "Mostra la dimensione delle cartelle",
       "hint": "Somma il contenuto di ogni cartella visibile. Un totale che non può essere completo è segnato con +.",
       "needsColumn": "Richiede la colonna Dimensione, che è nascosta."
+    },
+    "deepFolderSizes": {
+      "label": "Includi le cartelle escluse nel totale",
+      "warning": "⚠︎ Percorre le cache e le cartelle cloud lasciate fuori dall'indice. Può rallentare il sistema e consumare più batteria. La scansione va alla priorità più bassa e cede a tutto il resto."
     }
   },
   "language": {

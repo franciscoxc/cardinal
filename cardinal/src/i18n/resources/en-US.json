@@ -168,6 +168,10 @@
       "label": "Show folder sizes",
       "hint": "Adds up what each visible folder holds. A total that cannot be complete is marked with +.",
       "needsColumn": "Needs the Size column, which is hidden."
+    },
+    "deepFolderSizes": {
+      "label": "Include excluded folders in the total",
+      "warning": "⚠︎ Walks the caches and cloud folders left out of the index. It can slow the system down and use more battery. The walk runs at the lowest priority and yields to everything else."
     }
   },
   "language": {

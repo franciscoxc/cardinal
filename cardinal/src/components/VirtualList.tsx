@@ -42,6 +42,7 @@ type VirtualListProps = {
   contentTerms?: readonly string[];
   caseInsensitive?: boolean;
   folderSizes?: boolean;
+  deepFolderSizes?: boolean;
 };
 
 // Virtualized list with lazy row hydration plus a short-lived frozen viewport during
@@ -58,6 +59,7 @@ export const VirtualList = forwardRef<VirtualListHandle, VirtualListProps>(funct
     contentTerms = [],
     caseInsensitive = false,
     folderSizes = false,
+    deepFolderSizes = false,
   },
   ref,
 ) {
@@ -79,6 +81,7 @@ export const VirtualList = forwardRef<VirtualListHandle, VirtualListProps>(funct
     contentTerms,
     caseInsensitive,
     folderSizes,
+    deepFolderSizes,
   );
 
   // Virtualized height powers the scrollbar math

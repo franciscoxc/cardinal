@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Show how much a folder holds in the Size column, which until now was empty for folders. The total is summed from the index in memory rather than by walking the disk, and only for the rows on screen. Off by default: the app behaves exactly as before until you turn it on in Preferences.
+- Complete a folder total by walking the excluded directories on disk, behind a second preference with a warning. The number grows on screen as the walk proceeds and drops its `+` when it finishes, since a partial sum is already a true lower bound. The walk runs on one thread at background QoS with the disk I/O throttle, the policy Spotlight and Time Machine use, and is cancelled as soon as its row scrolls out of view.
 - Mark a folder total with `+` when it is a lower bound, because part of the folder is unreadable or kept out of the index by the watch configuration. Hovering explains which.
 - Show or hide columns from the header's context menu, the way Finder does. The order and the hidden set are both remembered, and the file name can never be hidden — without it the list is a wall of dates and sizes. The snippet column is only offered while a content search is running.
 - Hiding the snippet column now stops the work behind it: the search no longer reads every visible file to cut a snippet out of it.

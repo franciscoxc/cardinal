@@ -37,6 +37,8 @@ const baseProps = {
   onWatchConfigChange: vi.fn(),
   folderSizesEnabled: false,
   onFolderSizesEnabledChange: vi.fn(),
+  deepFolderSizesEnabled: false,
+  onDeepFolderSizesEnabledChange: vi.fn(),
   sizeColumnVisible: true,
 };
 

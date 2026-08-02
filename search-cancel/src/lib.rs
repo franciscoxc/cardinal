@@ -9,6 +9,9 @@ pub static ACTIVE_SEARCH_VERSION: AtomicU64 = AtomicU64::new(0);
 /// A global atomic identifies the active scanning process version of Cardinal.
 pub static ACTIVE_SCAN_VERSION: AtomicU64 = AtomicU64::new(0);
 
+/// A global atomic identifies the active folder-size walk generation.
+pub static ACTIVE_FOLDER_SIZE_VERSION: AtomicU64 = AtomicU64::new(0);
+
 #[derive(Clone, Copy, Debug)]
 pub struct CancellationToken {
     active_version: &'static AtomicU64,
@@ -41,6 +44,17 @@ impl CancellationToken {
         Self {
             version,
             active_version: &ACTIVE_SCAN_VERSION,
+        }
+    }
+
+    /// Creates a token for a batch of folder-size walks, cancelling any walk still running for an
+    /// older viewport. Its own generation, so a search or a rescan does not disturb it and it does
+    /// not disturb them.
+    pub fn new_folder_size() -> Self {
+        let version = self::ACTIVE_FOLDER_SIZE_VERSION.fetch_add(1, Ordering::SeqCst) + 1;
+        Self {
+            version,
+            active_version: &ACTIVE_FOLDER_SIZE_VERSION,
         }
     }
 

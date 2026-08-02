@@ -1,5 +1,6 @@
 use crate::{
     commands::{FolderSize, NodeInfoRequest, NodeInfoResponse, SearchJob, WatchConfigUpdate},
+    folder_size::WalkRequest,
     lifecycle::{APP_QUIT, AppLifecycleState, load_app_state, update_app_state},
     search_activity,
     window_controls::is_main_window_foreground,
@@ -48,6 +49,7 @@ pub struct BackgroundLoopChannels {
     pub rescan_rx: Receiver<CancellationToken>,
     pub watch_config_rx: Receiver<WatchConfigUpdate>,
     pub icon_update_tx: Sender<IconPayload>,
+    pub folder_size_request_tx: Sender<WalkRequest>,
 }
 
 pub fn reset_status_bar(app_handle: &AppHandle) {
@@ -263,6 +265,7 @@ fn compute_folder_sizes(
     cache: &mut SearchCache,
     slab_indices: &[SlabIndex],
     nodes: &[SearchResultNode],
+    walk: Option<(CancellationToken, &Sender<WalkRequest>)>,
 ) -> Vec<Option<FolderSize>> {
     let token = CancellationToken::noop();
     slab_indices
@@ -273,12 +276,27 @@ fn compute_folder_sizes(
                 return None;
             }
             let total = cache.subtree_size(index, token)?;
+            let excluded_roots = cache.excluded_roots_under(node.path.as_ref());
+
+            if let Some((walk_token, request_tx)) = walk
+                && !excluded_roots.is_empty()
+            {
+                // The row shows the indexed sum right away and the walk grows it from there, so
+                // the number is useful before the disk has been touched.
+                let _ = request_tx.try_send(WalkRequest {
+                    slab_index: index.get() as u64,
+                    roots: excluded_roots.clone(),
+                    indexed_bytes: total.bytes,
+                    cancellation_token: walk_token,
+                });
+            }
+
             Some(FolderSize {
                 bytes: total.bytes,
                 // Either reason makes the number a lower bound, and the UI marks both the same
                 // way: there is no useful distinction between "could not read it" and "you told
                 // me not to look".
-                incomplete: total.unreadable || cache.subtree_excluded_by_config(node.path.as_ref()),
+                incomplete: total.unreadable || !excluded_roots.is_empty(),
             })
         })
         .collect()
@@ -349,6 +367,7 @@ pub fn run_background_event_loop(
         rescan_rx,
         watch_config_rx,
         icon_update_tx,
+        folder_size_request_tx,
     } = channels;
     let mut processed_events = 0usize;
     let mut history_ready = load_app_state() == AppLifecycleState::Ready;
@@ -400,11 +419,20 @@ pub fn run_background_event_loop(
                 let NodeInfoRequest {
                     slab_indices,
                     folder_sizes: want_folder_sizes,
+                    deep_folder_sizes,
                     response_tx,
                 } = request;
                 let nodes = cache.expand_file_nodes(&slab_indices);
                 let folder_sizes = if want_folder_sizes {
-                    compute_folder_sizes(&mut cache, &slab_indices, &nodes)
+                    // A fresh generation cancels the walks queued for the previous viewport: rows
+                    // that scrolled away stop costing disk immediately.
+                    let walk_token = deep_folder_sizes.then(CancellationToken::new_folder_size);
+                    compute_folder_sizes(
+                        &mut cache,
+                        &slab_indices,
+                        &nodes,
+                        walk_token.map(|token| (token, &folder_size_request_tx)),
+                    )
                 } else {
                     Vec::new()
                 };

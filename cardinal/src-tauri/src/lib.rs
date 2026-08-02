@@ -68,6 +68,8 @@ pub fn run() -> Result<()> {
     let (watch_config_tx, watch_config_rx) = unbounded::<WatchConfigUpdate>();
     let (icon_update_tx, icon_update_rx) = unbounded::<IconPayload>();
     let (folder_size_tx, folder_size_rx) = unbounded::<crate::folder_size::WalkProgress>();
+    // The worker owns the throttled thread; the loop only queues onto it.
+    let folder_size_request_tx = crate::folder_size::spawn_worker(folder_size_tx);
     let (update_window_state_tx, update_window_state_rx) = bounded::<()>(1);
     let (logic_start_tx, logic_start_rx) = bounded(1);
     LOGIC_START
@@ -162,6 +164,7 @@ pub fn run() -> Result<()> {
         rescan_rx,
         watch_config_rx,
         icon_update_tx,
+        folder_size_request_tx,
         update_window_state_rx,
     };
     emit_app_state(app_handle);

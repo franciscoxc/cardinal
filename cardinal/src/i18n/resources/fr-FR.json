@@ -168,6 +168,10 @@
       "label": "Afficher la taille des dossiers",
       "hint": "Additionne le contenu de chaque dossier visible. Un total qui ne peut être complet est marqué d'un +.",
       "needsColumn": "Nécessite la colonne Taille, qui est masquée."
+    },
+    "deepFolderSizes": {
+      "label": "Inclure les dossiers exclus dans le total",
+      "warning": "⚠︎ Parcourt les caches et dossiers cloud laissés hors de l'index. Peut ralentir le système et consommer plus de batterie. Le parcours s'exécute à la priorité la plus basse et cède à tout le reste."
     }
   },
   "language": {

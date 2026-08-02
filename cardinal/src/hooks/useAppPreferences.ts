@@ -14,6 +14,7 @@ import { useIncludePaths } from './useIncludePaths';
 import { useWatchRoot } from './useWatchRoot';
 
 export const FOLDER_SIZES_STORAGE_KEY = 'cardinal.preferences.folderSizes';
+export const DEEP_FOLDER_SIZES_STORAGE_KEY = 'cardinal.preferences.deepFolderSizes';
 
 type WatchConfigChangePayload = {
   watchRoot: string;
@@ -34,6 +35,8 @@ type UseAppPreferencesResult = {
   trayIconEnabled: boolean;
   folderSizesEnabled: boolean;
   setFolderSizesEnabled: (enabled: boolean) => void;
+  deepFolderSizesEnabled: boolean;
+  setDeepFolderSizesEnabled: (enabled: boolean) => void;
   setTrayIconEnabled: (enabled: boolean) => void;
   watchRoot: string;
   defaultWatchRoot: string;
@@ -74,6 +77,16 @@ export function useAppPreferences({
     write: (value) => (value ? 'true' : 'false'),
     readErrorMessage: 'Failed to read folder size preference',
     writeErrorMessage: 'Failed to persist folder size preference',
+  });
+  // Off by default and gated on the one above: this is the walk of the very directories that were
+  // excluded to save battery, so it is opt-in twice over.
+  const [deepFolderSizesEnabled, setDeepFolderSizesEnabled] = useStoredState<boolean>({
+    key: DEEP_FOLDER_SIZES_STORAGE_KEY,
+    defaultValue: false,
+    read: (raw) => raw === 'true',
+    write: (value) => (value ? 'true' : 'false'),
+    readErrorMessage: 'Failed to read deep folder size preference',
+    writeErrorMessage: 'Failed to persist deep folder size preference',
   });
   const [preferencesResetToken, setPreferencesResetToken] = useState(0);
 
@@ -168,6 +181,8 @@ export function useAppPreferences({
     trayIconEnabled,
     folderSizesEnabled,
     setFolderSizesEnabled,
+    deepFolderSizesEnabled,
+    setDeepFolderSizesEnabled,
     setTrayIconEnabled,
     watchRoot,
     defaultWatchRoot,

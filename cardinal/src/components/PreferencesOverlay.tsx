@@ -14,6 +14,8 @@ type PreferencesOverlayProps = {
   onTrayIconEnabledChange: (enabled: boolean) => void;
   folderSizesEnabled: boolean;
   onFolderSizesEnabledChange: (enabled: boolean) => void;
+  deepFolderSizesEnabled: boolean;
+  onDeepFolderSizesEnabledChange: (enabled: boolean) => void;
   /** The switch has no effect while the Size column is hidden, so it is shown as unavailable. */
   sizeColumnVisible: boolean;
   watchRoot: string;
@@ -41,6 +43,8 @@ export function PreferencesOverlay({
   onTrayIconEnabledChange,
   folderSizesEnabled,
   onFolderSizesEnabledChange,
+  deepFolderSizesEnabled,
+  onDeepFolderSizesEnabledChange,
   sizeColumnVisible,
   watchRoot,
   defaultWatchRoot,
@@ -225,6 +229,28 @@ export function PreferencesOverlay({
                   disabled={!sizeColumnVisible}
                   onChange={(event) => onFolderSizesEnabledChange(event.target.checked)}
                   aria-label={t('preferences.folderSizes.label')}
+                />
+                <span className="preferences-switch__track" aria-hidden="true" />
+              </label>
+            </div>
+          </div>
+          <div className="preferences-row">
+            <div className="preferences-row__details">
+              <p className="preferences-label">{t('preferences.deepFolderSizes.label')}</p>
+              <p className="preferences-hint preferences-hint--warning">
+                {t('preferences.deepFolderSizes.warning')}
+              </p>
+            </div>
+            <div className="preferences-control">
+              <label className="preferences-switch">
+                <input
+                  className="preferences-switch__input"
+                  type="checkbox"
+                  checked={deepFolderSizesEnabled && folderSizesEnabled && sizeColumnVisible}
+                  // Pointless on its own: there is no total to complete unless the sums are on.
+                  disabled={!folderSizesEnabled || !sizeColumnVisible}
+                  onChange={(event) => onDeepFolderSizesEnabledChange(event.target.checked)}
+                  aria-label={t('preferences.deepFolderSizes.label')}
                 />
                 <span className="preferences-switch__track" aria-hidden="true" />
               </label>

@@ -41,6 +41,7 @@ type FilesTabContentProps = {
   contentTerms: readonly string[];
   caseInsensitive: boolean;
   folderSizes: boolean;
+  deepFolderSizes: boolean;
   columnOrder: readonly OrderedColumn[];
   onColumnMove: (dragged: OrderedColumn, target: OrderedColumn) => void;
   columnsTemplate: string;
@@ -70,6 +71,7 @@ export function FilesTabContent({
   contentTerms,
   caseInsensitive,
   folderSizes,
+  deepFolderSizes,
   columnOrder,
   onColumnMove,
   columnsTemplate,
@@ -110,6 +112,7 @@ export function FilesTabContent({
             contentTerms={contentTerms}
             caseInsensitive={caseInsensitive}
             folderSizes={folderSizes}
+            deepFolderSizes={deepFolderSizes}
           />
         )}
       </div>

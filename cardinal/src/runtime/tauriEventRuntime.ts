@@ -2,6 +2,7 @@ import { listen } from '@tauri-apps/api/event';
 import type { Event as TauriEvent, UnlistenFn } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { DragDropEvent } from '@tauri-apps/api/window';
+import type { FolderSizeUpdatePayload } from '../types/ipc';
 import type {
   AppLifecycleStatus,
   IconUpdatePayload,
@@ -32,6 +33,7 @@ const fsEventsBatchListeners = new Set<Listener<RecentEventPayload[]>>();
 const iconUpdateListeners = new Set<Listener<readonly IconUpdatePayload[]>>();
 const quickLookKeydownListeners = new Set<Listener<QuickLookKeydownPayload>>();
 const windowDragDropListeners = new Set<Listener<WindowDragDropEvent>>();
+const folderSizeListeners = new Set<Listener<readonly FolderSizeUpdatePayload[]>>();
 
 let initPromise: Promise<void> | null = null;
 
@@ -123,6 +125,14 @@ export const initializeTauriEventRuntime = (): Promise<void> => {
       }).catch((error) => {
         console.error('Failed to register fs_events_batch listener', error);
       }),
+      listen<readonly FolderSizeUpdatePayload[] | null | undefined>(
+        'folder_size_update',
+        (event) => {
+          emit(folderSizeListeners, event.payload ?? []);
+        },
+      ).catch((error) => {
+        console.error('Failed to register folder_size_update listener', error);
+      }),
       listen<readonly IconUpdateWirePayload[] | null | undefined>('icon_update', (event) => {
         const payload = normalizeIconUpdates(event.payload);
         if (payload.length === 0) return;
@@ -187,6 +197,10 @@ export const subscribeQuickLookKeydown = (
   void initializeTauriEventRuntime();
   return subscribe(quickLookKeydownListeners, listener);
 };
+
+export const subscribeFolderSizeUpdate = (
+  listener: Listener<readonly FolderSizeUpdatePayload[]>,
+): UnlistenFn => subscribe(folderSizeListeners, listener);
 
 export const subscribeWindowDragDrop = (listener: Listener<WindowDragDropEvent>): UnlistenFn => {
   void initializeTauriEventRuntime();

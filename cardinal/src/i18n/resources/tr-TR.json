@@ -168,6 +168,10 @@
       "label": "Klasör boyutlarını göster",
       "hint": "Görünen her klasörün içeriğini toplar. Tam olamayan bir toplam + ile işaretlenir.",
       "needsColumn": "Boyut sütunu gerekli, ancak gizli."
+    },
+    "deepFolderSizes": {
+      "label": "Hariç tutulan klasörleri toplama dahil et",
+      "warning": "⚠︎ Dizin dışında bırakılan önbellek ve bulut klasörlerini tarar. Sistemi yavaşlatabilir ve daha fazla pil harcayabilir. Tarama en düşük öncelikte çalışır ve her şeye yol verir."
     }
   },
   "language": {

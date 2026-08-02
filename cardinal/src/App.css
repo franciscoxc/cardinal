@@ -191,6 +191,16 @@ main,
   text-align: left;
 }
 
+.preferences-hint--warning {
+  color: #b45309;
+}
+
+@media (prefers-color-scheme: dark) {
+  .preferences-hint--warning {
+    color: #fbbf24;
+  }
+}
+
 .preferences-switch__input:disabled + .preferences-switch__track {
   opacity: 0.45;
   cursor: not-allowed;
