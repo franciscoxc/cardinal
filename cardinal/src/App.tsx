@@ -291,6 +291,9 @@ function App() {
     () => (showContentContext ? contentTerms : []),
     [contentTerms, showContentContext],
   );
+  // Hiding the Size column is what stops the sums: there is nowhere to show them, so there is no
+  // reason to walk a subtree per visible row.
+  const wantFolderSizes = visibleColumns.includes('size');
   const columnsTemplate = useMemo(
     () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
     [visibleColumns],
@@ -490,6 +493,7 @@ function App() {
               showContentContext={showContentContext}
               contentTerms={snippetTerms}
               caseInsensitive={!caseSensitive}
+              folderSizes={wantFolderSizes}
               columnOrder={visibleColumns}
               onColumnMove={moveColumn}
               columnsTemplate={columnsTemplate}

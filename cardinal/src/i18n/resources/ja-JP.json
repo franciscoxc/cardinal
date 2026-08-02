@@ -50,7 +50,8 @@
     "size": "サイズ",
     "modified": "更新日時",
     "created": "作成日時",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "下限値：このフォルダの一部は読み取れないか、索引から除外されています。"
   },
   "sorting": {
     "disabled": "並べ替えは無効化されています。結果が多すぎる ({{limit}}+) とパフォーマンスに影響する可能性があります。環境設定でしきい値を調整できます。"

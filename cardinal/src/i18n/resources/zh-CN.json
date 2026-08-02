@@ -50,7 +50,8 @@
     "size": "大小",
     "modified": "修改时间",
     "created": "创建时间",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "下限：此文件夹的部分内容无法读取或未被索引。"
   },
   "sorting": {
     "disabled": "排序已禁用。结果超过 {{limit}} 个可能影响性能。您可以在偏好设置中调整阈值。"

@@ -16,6 +16,8 @@ const fromNodeInfo = (node: NodeInfoResponse): SearchResultItem => ({
   ctime: node.ctime ?? node.metadata?.ctime,
   icon: node.icon ?? undefined,
   contentContext: node.contentContext ?? undefined,
+  folderSize: node.folderSize ?? undefined,
+  folderSizeIncomplete: node.folderSizeIncomplete ?? undefined,
 });
 
 // Data-only loader for visible rows. It owns row metadata caching and stale-request rejection;
@@ -25,6 +27,7 @@ export function useDataLoader(
   dataResultsVersion: number,
   contentTerms: readonly string[] = [],
   caseInsensitive = false,
+  folderSizes = false,
 ) {
   const loadingRef = useRef<Set<SlabIndex>>(new Set());
   // Monotonic epoch for range-load requests. A new search result-set bumps this value so
@@ -40,9 +43,11 @@ export function useDataLoader(
   const resultsRef = useRef<SlabIndex[]>([]);
   const contentTermsRef = useRef<readonly string[]>([]);
   const caseInsensitiveRef = useRef(caseInsensitive);
+  const folderSizesRef = useRef(folderSizes);
   resultsRef.current = results;
   contentTermsRef.current = contentTerms;
   caseInsensitiveRef.current = caseInsensitive;
+  folderSizesRef.current = folderSizes;
 
   // Reset cache state whenever the backing result-set changes so slab-index reuse in the
   // backend cannot surface stale row data for a newer search result-set.
@@ -116,6 +121,7 @@ export function useDataLoader(
         results: needLoading,
         contentTerms: contentTermsRef.current,
         caseInsensitive: caseInsensitiveRef.current,
+        folderSizes: folderSizesRef.current,
       });
       if (versionRef.current !== versionAtRequest) {
         // The result-set changed while this request was in flight. Drop the payload instead of

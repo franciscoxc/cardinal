@@ -41,6 +41,7 @@ type VirtualListProps = {
   onScrollSync: (scrollLeft: number) => void;
   contentTerms?: readonly string[];
   caseInsensitive?: boolean;
+  folderSizes?: boolean;
 };
 
 // Virtualized list with lazy row hydration plus a short-lived frozen viewport during
@@ -56,6 +57,7 @@ export const VirtualList = forwardRef<VirtualListHandle, VirtualListProps>(funct
     onScrollSync,
     contentTerms = [],
     caseInsensitive = false,
+    folderSizes = false,
   },
   ref,
 ) {
@@ -76,6 +78,7 @@ export const VirtualList = forwardRef<VirtualListHandle, VirtualListProps>(funct
     dataResultsVersion,
     contentTerms,
     caseInsensitive,
+    folderSizes,
   );
 
   // Virtualized height powers the scrollbar math

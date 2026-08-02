@@ -40,6 +40,7 @@ type FilesTabContentProps = {
   showContentContext: boolean;
   contentTerms: readonly string[];
   caseInsensitive: boolean;
+  folderSizes: boolean;
   columnOrder: readonly OrderedColumn[];
   onColumnMove: (dragged: OrderedColumn, target: OrderedColumn) => void;
   columnsTemplate: string;
@@ -68,6 +69,7 @@ export function FilesTabContent({
   showContentContext,
   contentTerms,
   caseInsensitive,
+  folderSizes,
   columnOrder,
   onColumnMove,
   columnsTemplate,
@@ -107,6 +109,7 @@ export function FilesTabContent({
             onScrollSync={onScrollSync}
             contentTerms={contentTerms}
             caseInsensitive={caseInsensitive}
+            folderSizes={folderSizes}
           />
         )}
       </div>

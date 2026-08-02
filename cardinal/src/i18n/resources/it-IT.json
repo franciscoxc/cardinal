@@ -50,7 +50,8 @@
     "size": "Dimensione",
     "modified": "Modificato",
     "created": "Creato",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "Limite inferiore: parte di questa cartella non è leggibile o è esclusa dall'indice."
   },
   "sorting": {
     "disabled": "L'ordinamento è disattivato. Troppi risultati ({{limit}}+) potrebbero influire sulle prestazioni. Puoi regolare la soglia in Preferenze."

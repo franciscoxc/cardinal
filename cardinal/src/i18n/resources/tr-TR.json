@@ -50,7 +50,8 @@
     "size": "Boyut",
     "modified": "Değiştirildi",
     "created": "Oluşturuldu",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "Alt sınır: Bu klasörün bir kısmı okunamıyor veya dizin dışında."
   },
   "sorting": {
     "disabled": "Sıralama devre dışı. Çok fazla sonuç ({{limit}}+) performansı etkileyebilir. Eşiği Tercihler'de ayarlayabilirsiniz."

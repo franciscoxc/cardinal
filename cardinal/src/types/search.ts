@@ -13,6 +13,9 @@ export type SearchResultItem = Readonly<{
   ctime?: number;
   icon?: string;
   contentContext?: string;
+  folderSize?: number;
+  /** The folder total is a lower bound: something under it is unreadable or excluded. */
+  folderSizeIncomplete?: boolean;
 }>;
 
 export type NodeInfoResponse = Readonly<{
@@ -23,4 +26,6 @@ export type NodeInfoResponse = Readonly<{
   mtime?: number | null;
   ctime?: number | null;
   contentContext?: string | null;
+  folderSize?: number | null;
+  folderSizeIncomplete?: boolean | null;
 }>;

@@ -50,7 +50,8 @@
     "size": "Size",
     "modified": "Modified",
     "created": "Created",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "Lower bound: part of this folder is unreadable or excluded from the index."
   },
   "sorting": {
     "disabled": "Sorting is disabled. Too many results ({{limit}}+) may impact performance. You can adjust the threshold in Preferences."

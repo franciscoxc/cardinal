@@ -50,7 +50,8 @@
     "size": "Taille",
     "modified": "Modifié",
     "created": "Créé",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "Borne inférieure : une partie de ce dossier est illisible ou exclue de l'index."
   },
   "sorting": {
     "disabled": "Le tri est désactivé. Trop de résultats ({{limit}}+) peuvent affecter les performances. Vous pouvez ajuster le seuil dans les Préférences."

@@ -50,7 +50,8 @@
     "size": "Tamanho",
     "modified": "Modificado",
     "created": "Criado",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "Limite inferior: parte desta pasta não pode ser lida ou está excluída do índice."
   },
   "sorting": {
     "disabled": "A ordenação está desativada. Muitos resultados ({{limit}}+) podem afetar o desempenho. Ajuste o limite em Preferências."

@@ -1,5 +1,5 @@
 use crate::{
-    commands::{NodeInfoRequest, SearchJob, WatchConfigUpdate},
+    commands::{FolderSize, NodeInfoRequest, NodeInfoResponse, SearchJob, WatchConfigUpdate},
     lifecycle::{APP_QUIT, AppLifecycleState, load_app_state, update_app_state},
     search_activity,
     window_controls::is_main_window_foreground,
@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rayon::spawn;
 use search_cache::{
-    HandleFSEError, SearchCache, SearchOptions, SearchResultNode, SlabIndex, WalkData,
+    HandleFSEError, NodeFileType, SearchCache, SearchOptions, SearchResultNode, SlabIndex, WalkData,
 };
 use search_cancel::CancellationToken;
 use serde::Serialize;
@@ -254,6 +254,36 @@ fn handle_event_watcher_events(
     }
 }
 
+/// Sizes for the directories among `nodes`, in the same order. Anything else gets `None`.
+///
+/// Runs on the loop that also answers searches, so it is deliberately limited to what the caller
+/// asked for — one viewport's worth of rows. It is not throttled: these rows are on screen and the
+/// user is waiting for them, unlike the background walk that will fill in excluded folders later.
+fn compute_folder_sizes(
+    cache: &mut SearchCache,
+    slab_indices: &[SlabIndex],
+    nodes: &[SearchResultNode],
+) -> Vec<Option<FolderSize>> {
+    let token = CancellationToken::noop();
+    slab_indices
+        .iter()
+        .zip(nodes)
+        .map(|(&index, node)| {
+            if node.metadata.as_ref()?.r#type() != NodeFileType::Dir {
+                return None;
+            }
+            let total = cache.subtree_size(index, token)?;
+            Some(FolderSize {
+                bytes: total.bytes,
+                // Either reason makes the number a lower bound, and the UI marks both the same
+                // way: there is no useful distinction between "could not read it" and "you told
+                // me not to look".
+                incomplete: total.unreadable || cache.subtree_excluded_by_config(node.path.as_ref()),
+            })
+        })
+        .collect()
+}
+
 fn handle_icon_viewport_update(
     cache: &mut SearchCache,
     update: (u64, Vec<SlabIndex>),
@@ -369,10 +399,16 @@ pub fn run_background_event_loop(
                 let request = request.expect("Node info channel closed");
                 let NodeInfoRequest {
                     slab_indices,
+                    folder_sizes: want_folder_sizes,
                     response_tx,
                 } = request;
-                let node_info_results = cache.expand_file_nodes(&slab_indices);
-                let _ = response_tx.send(node_info_results);
+                let nodes = cache.expand_file_nodes(&slab_indices);
+                let folder_sizes = if want_folder_sizes {
+                    compute_folder_sizes(&mut cache, &slab_indices, &nodes)
+                } else {
+                    Vec::new()
+                };
+                let _ = response_tx.send(NodeInfoResponse { nodes, folder_sizes });
             }
             recv(icon_viewport_rx) -> update => {
                 let update = update.expect("Icon viewport channel closed");

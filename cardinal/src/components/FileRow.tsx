@@ -1,5 +1,6 @@
 import React, { memo, useCallback, DragEvent, useRef } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CONTEXT_COLUMN, type OrderedColumn } from '../hooks/useColumnOrder';
 import { MiddleEllipsisHighlight } from './MiddleEllipsisHighlight';
 import { formatKB, formatTimestamp } from '../utils/format';
@@ -42,6 +43,7 @@ export const FileRow = memo(function FileRow({
   showContentContext = false,
   columnOrder,
 }: FileRowProps): React.JSX.Element {
+  const { t } = useTranslation();
   const pendingSelectRef = useRef<{
     isShift: boolean;
     isMeta: boolean;
@@ -57,7 +59,14 @@ export const FileRow = memo(function FileRow({
   const mtimeSec = metadata?.mtime ?? item.mtime;
   const ctimeSec = metadata?.ctime ?? item.ctime;
   const sizeBytes = metadata?.size ?? item.size;
-  const sizeText = metadata?.type !== 1 ? formatKB(sizeBytes) : null;
+  // type 1 is a directory: its own inode size says nothing about what it holds, so the column
+  // stayed empty until the folder total arrived.
+  const isDirectory = metadata?.type === 1;
+  const folderSizeText = item.folderSize == null ? null : formatKB(item.folderSize);
+  const sizeText = isDirectory ? folderSizeText : formatKB(sizeBytes);
+  // A lower bound, not a total: something under the folder is unreadable or excluded by the
+  // watch configuration. Shown as a suffix so the number itself stays readable.
+  const sizeSuffix = isDirectory && item.folderSizeIncomplete ? '+' : '';
   const mtimeText = formatTimestamp(mtimeSec);
   const ctimeText = formatTimestamp(ctimeSec);
 
@@ -200,8 +209,12 @@ export const FileRow = memo(function FileRow({
             );
           case 'size':
             return (
-              <span key={column} className={`size-text ${!sizeText ? 'muted' : ''}`}>
-                {sizeText || '—'}
+              <span
+                key={column}
+                className={`size-text ${!sizeText ? 'muted' : ''}`}
+                title={sizeSuffix ? t('columns.sizeIncomplete') : undefined}
+              >
+                {sizeText ? `${sizeText}${sizeSuffix}` : '—'}
               </span>
             );
           case 'modified':

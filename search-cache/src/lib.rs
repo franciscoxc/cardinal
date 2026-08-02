@@ -14,7 +14,7 @@ mod type_and_size;
 
 pub use cache::*;
 pub use file_nodes::*;
-pub use fswalk::WalkData;
+pub use fswalk::{NodeFileType, WalkData};
 pub use highlight::content_terms_of_query;
 pub use metadata_cache::*;
 pub use name_index::*;

@@ -50,7 +50,8 @@
     "size": "大小",
     "modified": "修改時間",
     "created": "建立時間",
-    "context": "Context"
+    "context": "Context",
+    "sizeIncomplete": "下限：此資料夾的部分內容無法讀取或未被索引。"
   },
   "sorting": {
     "disabled": "排序已停用。結果超過 {{limit}} 個可能影響效能。你可以在偏好設定中調整門檻。"

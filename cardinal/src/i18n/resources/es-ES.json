@@ -50,7 +50,8 @@
     "size": "Tamaño",
     "modified": "Modificado",
     "created": "Creado",
-    "context": "Contexto"
+    "context": "Contexto",
+    "sizeIncomplete": "Cota inferior: parte de esta carpeta no se puede leer o está excluida del índice."
   },
   "sorting": {
     "disabled": "La ordenación está deshabilitada. Demasiados resultados ({{limit}}+) pueden afectar el rendimiento. Puede ajustar el umbral en Preferencias."

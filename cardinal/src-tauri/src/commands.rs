@@ -62,7 +62,26 @@ pub struct SearchJob {
 #[derive(Debug, Clone)]
 pub struct NodeInfoRequest {
     pub slab_indices: Vec<SlabIndex>,
-    pub response_tx: Sender<Vec<SearchResultNode>>,
+    /// Only the rows on screen ask for folder sizes: the sum walks the subtree, so asking for
+    /// every result would traverse the whole index on each keystroke.
+    pub folder_sizes: bool,
+    pub response_tx: Sender<NodeInfoResponse>,
+}
+
+/// Folder sizes travel beside the nodes rather than inside `SearchResultNode`, which belongs to
+/// search-cache and knows nothing about what a viewport is asking for.
+pub struct NodeInfoResponse {
+    pub nodes: Vec<SearchResultNode>,
+    /// One entry per node, `None` for anything that is not a directory.
+    pub folder_sizes: Vec<Option<FolderSize>>,
+}
+
+#[derive(Clone, Copy)]
+pub struct FolderSize {
+    pub bytes: i64,
+    /// Something under the folder is missing from the total: unreadable, or kept out by the watch
+    /// configuration. The UI shows the number as a lower bound when this is set.
+    pub incomplete: bool,
 }
 
 #[derive(Default)]
@@ -102,22 +121,31 @@ impl SearchState {
     }
 
     fn request_nodes(&self, slab_indices: Vec<SlabIndex>) -> Vec<SearchResultNode> {
+        self.request_node_info(slab_indices, false).nodes
+    }
+
+    fn request_node_info(&self, slab_indices: Vec<SlabIndex>, folder_sizes: bool) -> NodeInfoResponse {
+        let empty = || NodeInfoResponse {
+            nodes: Vec::new(),
+            folder_sizes: Vec::new(),
+        };
         if slab_indices.is_empty() {
-            return Vec::new();
+            return empty();
         }
 
-        let (response_tx, response_rx) = bounded::<Vec<SearchResultNode>>(1);
+        let (response_tx, response_rx) = bounded::<NodeInfoResponse>(1);
         if let Err(e) = self.node_info_tx.send(NodeInfoRequest {
             slab_indices,
+            folder_sizes,
             response_tx,
         }) {
             error!("Failed to send node info request: {e:?}");
-            return Vec::new();
+            return empty();
         }
 
         response_rx.recv().unwrap_or_else(|e| {
             error!("Failed to receive node info results: {e:?}");
-            Vec::new()
+            empty()
         })
     }
 
@@ -221,6 +249,12 @@ pub struct NodeInfo {
     pub icon: Option<String>,
     #[serde(rename = "contentContext")]
     pub content_context: Option<String>,
+    /// Bytes held by a directory, absent for files and when the caller did not ask.
+    #[serde(rename = "folderSize")]
+    pub folder_size: Option<i64>,
+    /// The folder's total is a lower bound: something under it is unreadable or excluded.
+    #[serde(rename = "folderSizeIncomplete")]
+    pub folder_size_incomplete: Option<bool>,
 }
 
 #[derive(Serialize, Default)]
@@ -346,6 +380,7 @@ pub fn get_nodes_info(
     include_icons: Option<bool>,
     content_terms: Option<Vec<String>>,
     case_insensitive: Option<bool>,
+    folder_sizes: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Vec<NodeInfo> {
     if results.is_empty() {
@@ -355,12 +390,16 @@ pub fn get_nodes_info(
     let include_icons = include_icons.unwrap_or(true);
     let content_terms = content_terms.unwrap_or_default();
     let case_insensitive = case_insensitive.unwrap_or_default();
-    let nodes = state.request_nodes(results);
+    let NodeInfoResponse {
+        nodes,
+        folder_sizes,
+    } = state.request_node_info(results, folder_sizes.unwrap_or_default());
 
     // Rows are independent, and each one may read a file for its icon and its content snippet.
     nodes
         .into_par_iter()
-        .map(|SearchResultNode { path, metadata }| {
+        .enumerate()
+        .map(|(row, SearchResultNode { path, metadata })| {
             let content_context = content_terms
                 .iter()
                 .find_map(|term| content_snippet(&path, term, case_insensitive));
@@ -375,11 +414,14 @@ pub fn get_nodes_info(
             } else {
                 None
             };
+            let folder_size = folder_sizes.get(row).copied().flatten();
             NodeInfo {
                 path,
                 icon,
                 metadata: metadata.as_ref().map(NodeInfoMetadata::from_metadata),
                 content_context,
+                folder_size: folder_size.map(|size| size.bytes),
+                folder_size_incomplete: folder_size.map(|size| size.incomplete),
             }
         })
         .collect()

@@ -187,6 +187,24 @@ describe('useDataLoader', () => {
       results: [11],
       contentTerms: ['needle'],
       caseInsensitive: true,
+      folderSizes: false,
     });
+  });
+
+  it('only asks for folder sizes when the caller wants them', async () => {
+    const { result } = renderHook(() =>
+      // Walking a subtree per row is not free, so the flag follows the Size column's visibility
+      // rather than being always on.
+      useDataLoader([11 as SlabIndex], 1, [], false, true),
+    );
+
+    await act(async () => {
+      await result.current.ensureRangeLoaded(0, 0);
+    });
+
+    expect(mockedInvoke).toHaveBeenCalledWith(
+      'get_nodes_info',
+      expect.objectContaining({ folderSizes: true }),
+    );
   });
 });
