@@ -582,30 +582,40 @@ impl SearchCache {
     }
 
     /// Get all subnode indices of a given node index
-    /// Whether the watch configuration keeps part of `path`'s contents out of the index.
+    /// The directories under `path` that the watch configuration keeps out of the index.
     ///
     /// Asked of the configuration rather than of the tree, because an ignored directory never
     /// entered the index: from inside, a folder that had one is indistinguishable from a folder
-    /// that never did. The decision is delegated to `should_ignore_path`, the same rule the walker
-    /// applies, so a re-included subtree under an ignored one does not count as missing.
-    pub fn subtree_excluded_by_config(&self, path: &Path) -> bool {
+    /// that never did. Returning the roots rather than a yes/no is what lets a caller walk them on
+    /// disk to complete a total.
+    pub fn excluded_roots_under(&self, path: &Path) -> Vec<PathBuf> {
         let ignore = self.ignore_paths();
         let include = self.include_paths();
-        ignore.iter().any(|ignored| {
-            ignored.starts_with(path)
-                && ignored.as_path() != path
-                // ponytail-keep: compare against the include list here; do not ask
-                // `should_ignore_path(ignored, ..)`. That answers a different question and answers
-                // it wrongly for this one: when a re-included subtree sits inside an ignored
-                // directory, the walker must descend through the directory to reach it, so the
-                // rule reports the directory as *not* ignored — while still skipping every other
-                // child of it. A folder above it then looked complete when it was not.
-                //
-                // Only an include naming the ignored directory itself puts all of it back. A
-                // deeper include returns a part: for the siblings of that part the deepest ignore
-                // still outranks the deepest include, so they stay out.
-                && !include.iter().any(|included| included == ignored)
-        })
+        ignore
+            .iter()
+            .filter(|ignored| {
+                ignored.starts_with(path)
+                    && ignored.as_path() != path
+                    // ponytail-keep: compare against the include list here; do not ask
+                    // `should_ignore_path(ignored, ..)`. That answers a different question and
+                    // answers it wrongly for this one: when a re-included subtree sits inside an
+                    // ignored directory, the walker must descend through the directory to reach
+                    // it, so the rule reports the directory as *not* ignored — while still
+                    // skipping every other child of it. A folder above it then looked complete
+                    // when it was not.
+                    //
+                    // Only an include naming the ignored directory itself puts all of it back. A
+                    // deeper include returns a part: for the siblings of that part the deepest
+                    // ignore still outranks the deepest include, so they stay out.
+                    && !include.iter().any(|included| included == *ignored)
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// Whether anything under `path` is missing from the index because of the configuration.
+    pub fn subtree_excluded_by_config(&self, path: &Path) -> bool {
+        !self.excluded_roots_under(path).is_empty()
     }
 
     /// Bytes held by everything under `index`, and whether that total is complete.

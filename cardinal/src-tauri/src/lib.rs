@@ -1,5 +1,8 @@
 mod background;
 mod commands;
+mod folder_size;
+
+use crate::folder_size::FolderSizeUpdate;
 mod lifecycle;
 mod quicklook;
 mod search_activity;
@@ -64,6 +67,7 @@ pub fn run() -> Result<()> {
     let (rescan_tx, rescan_rx) = unbounded::<CancellationToken>();
     let (watch_config_tx, watch_config_rx) = unbounded::<WatchConfigUpdate>();
     let (icon_update_tx, icon_update_rx) = unbounded::<IconPayload>();
+    let (folder_size_tx, folder_size_rx) = unbounded::<crate::folder_size::WalkProgress>();
     let (update_window_state_tx, update_window_state_rx) = bounded::<()>(1);
     let (logic_start_tx, logic_start_rx) = bounded(1);
     LOGIC_START
@@ -162,6 +166,7 @@ pub fn run() -> Result<()> {
     };
     emit_app_state(app_handle);
     let icon_update_rx = &icon_update_rx;
+    let folder_size_rx = &folder_size_rx;
     std::thread::scope(move |s| {
         s.spawn(|| {
             while let Ok(icon) = icon_update_rx.recv() {
@@ -172,6 +177,26 @@ pub fn run() -> Result<()> {
                 app_handle.emit("icon_update", icons).unwrap();
             }
             info!("icon update thread exited");
+        });
+
+        s.spawn(move || {
+            // Batched like icons: a walk reports every 250ms per folder, and a viewport can have
+            // dozens of them.
+            while let Ok(first) = folder_size_rx.recv() {
+                let mut updates = vec![first];
+                std::thread::sleep(Duration::from_millis(120));
+                updates.extend(folder_size_rx.try_iter());
+                let payload: Vec<_> = updates
+                    .into_iter()
+                    .map(|progress| FolderSizeUpdate {
+                        slab_index: progress.slab_index,
+                        bytes: progress.bytes,
+                        done: progress.done,
+                    })
+                    .collect();
+                let _ = app_handle.emit("folder_size_update", payload);
+            }
+            info!("folder size thread exited");
         });
 
         let logic_start_rx = logic_start_rx;
