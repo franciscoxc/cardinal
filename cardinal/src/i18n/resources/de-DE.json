@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "Enthält",
-      "hint": "Text darin",
+      "hint": "(darin suchen)",
       "custom": "in der Suchleiste festgelegt"
-    }
+    },
+    "clear": "Löschen"
   },
   "stateDisplay": {
     "loading": "Suche läuft...",

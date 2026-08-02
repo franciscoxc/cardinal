@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "包含",
-      "hint": "檔案內文字",
+      "hint": "（在檔案內搜尋）",
       "custom": "已在搜尋列中設定"
-    }
+    },
+    "clear": "清除"
   },
   "stateDisplay": {
     "loading": "正在搜尋…",

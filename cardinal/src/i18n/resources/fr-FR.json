@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "Contient",
-      "hint": "texte dedans",
+      "hint": "(chercher dedans)",
       "custom": "défini dans la barre de recherche"
-    }
+    },
+    "clear": "Effacer"
   },
   "stateDisplay": {
     "loading": "Recherche en cours...",

@@ -36,8 +36,6 @@ type SearchParams = {
   caseSensitive: boolean;
 };
 
-export const DIRECTORY_SCOPE_OPEN_STORAGE_KEY = 'cardinal.search.directoryScopeOpen';
-
 type QueueSearchOptions = {
   immediate?: boolean;
   onSearchCommitted?: () => void;
@@ -95,28 +93,6 @@ const initialSearchParams: SearchParams = {
   directoryQuery: '',
   directoryScopeOpen: false,
   caseSensitive: false,
-};
-
-const readStoredDirectoryScopeOpen = (): boolean => {
-  if (typeof window === 'undefined') {
-    return initialSearchParams.directoryScopeOpen;
-  }
-  try {
-    return window.localStorage.getItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY) === 'true';
-  } catch {
-    return initialSearchParams.directoryScopeOpen;
-  }
-};
-
-const persistDirectoryScopeOpen = (open: boolean): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY, open ? 'true' : 'false');
-  } catch {
-    // Ignore storage failures.
-  }
 };
 
 const cancelTimer = (timerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>) => {
@@ -213,7 +189,9 @@ type UseFileSearchResult = {
 export function useFileSearch(): UseFileSearchResult {
   const [initialSearchParamsForHook] = useState<SearchParams>(() => ({
     ...initialSearchParams,
-    directoryScopeOpen: readStoredDirectoryScopeOpen(),
+    // Always folded at launch: the scope narrows every search, and one restored from a previous
+    // session is invisible enough to look like the index is broken.
+    directoryScopeOpen: false,
   }));
   const [state, dispatch] = useReducer(reducer, initialSearchState);
   const latestSearchRef = useRef<SearchParams>(initialSearchParamsForHook);
@@ -233,7 +211,6 @@ export function useFileSearch(): UseFileSearchResult {
   const updateSearchParams = useCallback((patch: Partial<SearchParams>) => {
     latestSearchRef.current = { ...latestSearchRef.current, ...patch };
     if (patch.directoryScopeOpen !== undefined) {
-      persistDirectoryScopeOpen(patch.directoryScopeOpen);
     }
     patchSearchParams(patch);
   }, []);

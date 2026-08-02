@@ -41,6 +41,26 @@ type SearchBarProps = {
   onBlur: FocusEventHandler<HTMLInputElement>;
 };
 
+function ClearButton({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <button
+      type="button"
+      className="field-clear"
+      aria-label={label}
+      title={label}
+      // A press here must not blur the field first: mousedown moves focus, and the input's
+      // selection is gone by the time the click lands.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClear}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="7" />
+        <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" />
+      </svg>
+    </button>
+  );
+}
+
 const isCollapsedAtStart = (input: HTMLInputElement): boolean =>
   input.selectionStart === 0 && input.selectionEnd === 0;
 
@@ -204,6 +224,9 @@ export function SearchBar({
                 onFocus={onFocus}
                 onBlur={onBlur}
               />
+              {directoryScopeOpen && directoryValue ? (
+                <ClearButton label={t('search.clear')} onClear={() => onDirectoryValueChange('')} />
+              ) : null}
               {directoryScopeOpen ? (
                 <button
                   type="button"
@@ -236,6 +259,9 @@ export function SearchBar({
             onFocus={onFocus}
             onBlur={onBlur}
           />
+          {value ? (
+            <ClearButton label={t('search.clear')} onClear={() => onQueryValueChange('')} />
+          ) : null}
         </div>
         <div className="search-segment content-search-segment">
           <label className="content-search-label" htmlFor="content-search-input">
@@ -256,6 +282,12 @@ export function SearchBar({
             onFocus={onFocus}
             onBlur={onBlur}
           />
+          {contentTerm && !contentIsCustom ? (
+            <ClearButton
+              label={t('search.clear')}
+              onClear={() => onQueryValueChange(setContentTerm(value, ''))}
+            />
+          ) : null}
         </div>
         <div className="search-segment search-options">
           {fileTypeEnabled ? (
@@ -278,6 +310,12 @@ export function SearchBar({
                 ) : null}
               </select>
             </label>
+          ) : null}
+          {fileTypeEnabled && fileType ? (
+            <ClearButton
+              label={t('search.clear')}
+              onClear={() => onQueryValueChange(setFileType(value, ''))}
+            />
           ) : null}
           <label className="search-option" title={caseSensitiveLabel}>
             <input

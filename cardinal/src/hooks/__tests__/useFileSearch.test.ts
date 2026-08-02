@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
 import type { SlabIndex } from '../../types/slab';
-import { DIRECTORY_SCOPE_OPEN_STORAGE_KEY, useFileSearch } from '../useFileSearch';
+import { useFileSearch } from '../useFileSearch';
 import { SearchStatusCode } from '../../types/ipc';
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -52,9 +52,7 @@ const renderReadySearchHook = async () => {
 };
 
 describe('useFileSearch', () => {
-  beforeEach(() => {
-    window.localStorage.setItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY, 'false');
-  });
+  beforeEach(() => {});
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -140,7 +138,6 @@ describe('useFileSearch', () => {
         },
       });
       expect(result.current.state.currentDirectoryQuery).toBe('Projects');
-      expect(window.localStorage.getItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY)).toBe('true');
     });
 
     mockedInvoke.mockClear();
@@ -156,30 +153,16 @@ describe('useFileSearch', () => {
         },
       });
       expect(result.current.state.currentDirectoryQuery).toBe('');
-      expect(window.localStorage.getItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY)).toBe('false');
     });
   });
 
-  it('hydrates persisted directory scope open state', async () => {
-    window.localStorage.setItem(DIRECTORY_SCOPE_OPEN_STORAGE_KEY, 'true');
+  it('starts folded, even after the scope was left open in a previous session', async () => {
+    window.localStorage.setItem('cardinal.search.directoryScopeOpen', 'true');
     mockSearchSuccess();
     const { result } = await renderReadySearchHook();
 
-    expect(result.current.searchParams.directoryScopeOpen).toBe(true);
-
-    act(() => {
-      result.current.queueDirectorySearch('Projects', { immediate: true });
-    });
-
-    await waitFor(() => {
-      expect(mockedInvoke).toHaveBeenLastCalledWith('search', {
-        query: null,
-        directoryQuery: 'Projects',
-        options: {
-          caseInsensitive: true,
-        },
-      });
-    });
+    // A scope restored from last time narrows every search while being easy to miss.
+    expect(result.current.searchParams.directoryScopeOpen).toBe(false);
   });
 
   it('passes whitespace directory scope through when the scope is active', async () => {

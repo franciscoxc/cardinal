@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "内容",
-      "hint": "中のテキスト",
+      "hint": "（中を検索）",
       "custom": "検索バーで指定済み"
-    }
+    },
+    "clear": "消去"
   },
   "stateDisplay": {
     "loading": "検索中...",

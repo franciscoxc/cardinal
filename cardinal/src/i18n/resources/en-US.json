@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "Contains",
-      "hint": "text inside",
+      "hint": "(search inside)",
       "custom": "set in the search bar"
-    }
+    },
+    "clear": "Clear"
   },
   "stateDisplay": {
     "loading": "Searching...",

@@ -32,9 +32,10 @@
     },
     "content": {
       "label": "İçerir",
-      "hint": "içindeki metin",
+      "hint": "(içinde ara)",
       "custom": "arama çubuğunda ayarlandı"
-    }
+    },
+    "clear": "Temizle"
   },
   "stateDisplay": {
     "loading": "Aranıyor...",

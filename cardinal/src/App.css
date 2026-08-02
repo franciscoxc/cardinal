@@ -118,23 +118,68 @@ main,
 }
 
 /* === Reordenar columnas arrastrando el título === */
+/* ew-resize es la doble flecha limpia; col-resize lleva una barra vertical y queda reservado
+   para el asa del borde, que es la que sí redimensiona. */
 .header-cell {
-  cursor: grab;
+  cursor: ew-resize;
 }
 
 .header-cell--dragging {
-  opacity: 0.45;
+  background-color: rgba(var(--color-accent-rgb), 0.14);
+  cursor: ew-resize;
 }
 
-/* La línea marca dónde va a caer la columna. */
-.header-cell--drop-target {
-  box-shadow: inset 2px 0 0 var(--color-accent);
+/* Mientras dura el arrastre el cursor no debe cambiar al pasar sobre otras celdas. */
+.header-row:has(.header-cell--dragging) * {
+  cursor: ew-resize !important;
 }
 
 /* El asa de redimensionar vive dentro de la celda arrastrable: sin esto, tomarla arrastra
    la columna entera en vez de cambiarle el ancho. */
 .col-resizer {
   cursor: col-resize;
+}
+
+/* Botón de borrar de cada campo, con la forma del de Finder. */
+.field-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-right: 0.4rem;
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.field-clear svg {
+  width: 100%;
+  height: 100%;
+}
+
+.field-clear circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.field-clear path {
+  stroke: var(--color-elevated-bg);
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.field-clear:hover {
+  color: var(--color-text);
+}
+
+.field-clear:focus-visible {
+  outline: 2px solid rgba(var(--color-accent-rgb), 0.5);
+  outline-offset: 1px;
+  border-radius: 50%;
 }
 
 /* === Campo "Contiene": busca dentro de los archivos === */

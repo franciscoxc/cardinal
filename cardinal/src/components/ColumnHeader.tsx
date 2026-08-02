@@ -1,8 +1,8 @@
-import React, { forwardRef, useCallback, useState } from 'react';
-import type { DragEvent } from 'react';
+import React, { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ColumnKey } from '../constants';
 import type { SortKey, SortState } from '../types/sort';
+import { useColumnDrag } from '../hooks/useColumnDrag';
 import { CONTEXT_COLUMN, type OrderedColumn } from '../hooks/useColumnOrder';
 
 const columnMeta: Record<ColumnKey, { labelKey: string; className: string }> = {
@@ -52,56 +52,11 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
     ref,
   ) => {
     const { t } = useTranslation();
-    const [draggedColumn, setDraggedColumn] = useState<OrderedColumn | null>(null);
-    const [dropTarget, setDropTarget] = useState<OrderedColumn | null>(null);
+    const { draggingColumn, registerCell, onHeaderMouseDown, consumeClickAfterDrag } =
+      useColumnDrag(onColumnMove);
 
-    const handleDragStart = useCallback(
-      (column: OrderedColumn) => (event: DragEvent<HTMLSpanElement>) => {
-        setDraggedColumn(column);
-        // Firefox ignores a drag that carries no data, and "move" gets the right cursor.
-        event.dataTransfer.setData('text/plain', column);
-        event.dataTransfer.effectAllowed = 'move';
-      },
-      [],
-    );
-
-    const handleDragOver = useCallback(
-      (column: OrderedColumn) => (event: DragEvent<HTMLSpanElement>) => {
-        if (!draggedColumn) {
-          return;
-        }
-        // Without preventDefault the browser refuses the drop outright.
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        setDropTarget(column);
-      },
-      [draggedColumn],
-    );
-
-    const handleDrop = useCallback(
-      (column: OrderedColumn) => (event: DragEvent<HTMLSpanElement>) => {
-        event.preventDefault();
-        if (draggedColumn) {
-          onColumnMove(draggedColumn, column);
-        }
-        setDraggedColumn(null);
-        setDropTarget(null);
-      },
-      [draggedColumn, onColumnMove],
-    );
-
-    const handleDragEnd = useCallback(() => {
-      setDraggedColumn(null);
-      setDropTarget(null);
-    }, []);
-
-    const dragClasses = (column: OrderedColumn) =>
-      [
-        draggedColumn === column ? 'header-cell--dragging' : '',
-        dropTarget === column && draggedColumn !== column ? 'header-cell--drop-target' : '',
-      ]
-        .filter(Boolean)
-        .join(' ');
+    const cellClasses = (column: OrderedColumn, base: string) =>
+      `${base} header header-cell${draggingColumn === column ? ' header-cell--dragging' : ''}`;
 
     return (
       <div ref={ref} className="header-row-container">
@@ -119,12 +74,9 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
               return (
                 <span
                   key={column}
-                  className={`context-text header header-cell ${dragClasses(column)}`}
-                  draggable
-                  onDragStart={handleDragStart(column)}
-                  onDragOver={handleDragOver(column)}
-                  onDrop={handleDrop(column)}
-                  onDragEnd={handleDragEnd}
+                  ref={registerCell(column)}
+                  className={cellClasses(column, 'context-text')}
+                  onMouseDown={onHeaderMouseDown(column)}
                 >
                   {t('columns.context')}
                 </span>
@@ -156,17 +108,19 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
             return (
               <span
                 key={column}
-                className={`${className} header header-cell ${dragClasses(column)}`}
-                draggable
-                onDragStart={handleDragStart(column)}
-                onDragOver={handleDragOver(column)}
-                onDrop={handleDrop(column)}
-                onDragEnd={handleDragEnd}
+                ref={registerCell(column)}
+                className={cellClasses(column, className)}
+                onMouseDown={onHeaderMouseDown(column)}
               >
                 <button
                   type="button"
                   className="sort-button"
-                  onClick={() => onSortToggle(sortKey)}
+                  onClick={() => {
+                    if (consumeClickAfterDrag()) {
+                      return;
+                    }
+                    onSortToggle(sortKey);
+                  }}
                   disabled={sortDisabled}
                   aria-pressed={isActive && !sortDisabled}
                   title={title}
@@ -176,11 +130,12 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
                 </button>
                 <span
                   className="col-resizer"
-                  // Dragging the resizer must not start a column drag: the handle sits inside the
-                  // draggable header cell, and the browser hands the gesture to the parent.
-                  draggable={false}
-                  onDragStart={(event) => event.preventDefault()}
-                  onMouseDown={onResizeStart(column)} // consume column-specific resize closures from the parent hook
+                  onMouseDown={(event) => {
+                    // The handle sits inside the header cell, so without this the same press
+                    // starts a column drag and the resize turns into a reorder.
+                    event.stopPropagation();
+                    onResizeStart(column)(event);
+                  }}
                 />
               </span>
             );
