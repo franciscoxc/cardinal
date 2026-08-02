@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-08-02
 - Fix column reordering, which did not work at all: the header showed a translucent title and dropped nothing. Tauri's webview claims drag-and-drop natively so the page can receive dropped files, which swallows the events HTML5 dragging needs. Reordering now runs on pointer events, and shows the column darkened and shuffling as you drag.
 - Add a clear button to the search field, the "Contains" field, the file-type dropdown and "Search in".
 - Start with "Search in" folded. A scope restored from a previous session narrows every search while being easy to miss.
