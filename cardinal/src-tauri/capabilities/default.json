@@ -13,6 +13,8 @@
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-ask",
+    "dialog:allow-message"
   ]
 }

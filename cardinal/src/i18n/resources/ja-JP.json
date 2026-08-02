@@ -142,7 +142,8 @@
     "maximize": "ズーム",
     "closeWindow": "ウインドウを閉じる",
     "help": "ヘルプ",
-    "getUpdates": "アップデートを入手"
+    "checkUpdates": "アップデートを確認…",
+    "releaseNotes": "リリース"
   },
   "preferences": {
     "title": "環境設定",
@@ -202,6 +203,23 @@
     "help": "1 行に 1 パス。含めるパスは、上位ディレクトリが無視対象でもインデックスされます。",
     "errors": {
       "absolute": "各パスは「/」または「~」で始まる必要があります。"
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "最新です",
+      "body": "Cardinal {{version}} は最新バージョンです。"
+    },
+    "available": {
+      "title": "新しいバージョンがあります",
+      "body": "Cardinal {{latest}} が利用できます。現在は {{current}} です。",
+      "download": "ダウンロード",
+      "later": "後で"
+    },
+    "failed": {
+      "title": "確認できませんでした",
+      "body": "GitHub に接続できませんでした。接続を確認するか、ブラウザでリリースページを開いてください。",
+      "open": "ページを開く"
     }
   }
 }

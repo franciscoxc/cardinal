@@ -141,7 +141,8 @@
     "maximize": "缩放窗口",
     "closeWindow": "关闭窗口",
     "help": "帮助",
-    "getUpdates": "获取更新"
+    "checkUpdates": "检查更新…",
+    "releaseNotes": "版本"
   },
   "preferences": {
     "title": "偏好设置",
@@ -201,6 +202,23 @@
     "help": "每行一个路径；即使父级目录被忽略，这些路径仍会被索引。",
     "errors": {
       "absolute": "每个路径需以“/”或“~”开头。"
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "已是最新版本",
+      "body": "Cardinal {{version}} 已是最新版本。"
+    },
+    "available": {
+      "title": "有新版本",
+      "body": "Cardinal {{latest}} 已发布，你当前使用 {{current}}。",
+      "download": "下载",
+      "later": "以后再说"
+    },
+    "failed": {
+      "title": "无法检查更新",
+      "body": "Cardinal 无法连接 GitHub。请检查网络，或在浏览器中打开版本页面。",
+      "open": "打开页面"
     }
   }
 }

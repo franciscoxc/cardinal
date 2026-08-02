@@ -142,7 +142,8 @@
     "maximize": "줌",
     "closeWindow": "윈도우 닫기",
     "help": "도움말",
-    "getUpdates": "업데이트 받기"
+    "checkUpdates": "업데이트 확인…",
+    "releaseNotes": "릴리스"
   },
   "preferences": {
     "title": "환경설정",
@@ -202,6 +203,23 @@
     "help": "한 줄에 하나의 경로; 포함할 경로는 상위 경로가 무시되더라도 색인됩니다.",
     "errors": {
       "absolute": "각 경로는 '/' 또는 '~'로 시작해야 합니다."
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "최신 버전입니다",
+      "body": "Cardinal {{version}}이(가) 최신 버전입니다."
+    },
+    "available": {
+      "title": "새 버전 있음",
+      "body": "Cardinal {{latest}}을(를) 사용할 수 있습니다. 현재 {{current}}입니다.",
+      "download": "다운로드",
+      "later": "나중에"
+    },
+    "failed": {
+      "title": "확인할 수 없음",
+      "body": "GitHub에 연결하지 못했습니다. 연결을 확인하거나 브라우저에서 릴리스 페이지를 여세요.",
+      "open": "페이지 열기"
     }
   }
 }

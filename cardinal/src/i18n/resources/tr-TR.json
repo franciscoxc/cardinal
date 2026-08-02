@@ -142,7 +142,8 @@
     "maximize": "Yakınlaştır",
     "closeWindow": "Pencereyi kapat",
     "help": "Yardım",
-    "getUpdates": "Güncellemeleri al"
+    "checkUpdates": "Güncellemeleri denetle…",
+    "releaseNotes": "Sürümler"
   },
   "preferences": {
     "title": "Tercihler",
@@ -202,6 +203,23 @@
     "help": "Her satıra bir yol; dahil edilen yollar, üst dizini yok sayılsa bile dizinde kalır.",
     "errors": {
       "absolute": "Her yol '/' veya '~' ile başlamalıdır."
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "Güncelsiniz",
+      "body": "Cardinal {{version}} en son sürüm."
+    },
+    "available": {
+      "title": "Güncelleme var",
+      "body": "Cardinal {{latest}} yayınlandı. Sizde {{current}} var.",
+      "download": "İndir",
+      "later": "Şimdi değil"
+    },
+    "failed": {
+      "title": "Denetlenemedi",
+      "body": "Cardinal GitHub'a ulaşamadı. Bağlantınızı denetleyin veya sürümler sayfasını tarayıcıda açın.",
+      "open": "Sayfayı aç"
     }
   }
 }

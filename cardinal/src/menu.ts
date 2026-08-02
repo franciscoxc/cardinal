@@ -1,11 +1,9 @@
 import { getName } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import i18n from './i18n/config';
+import { checkForUpdates } from './utils/checkForUpdates';
 import { openPreferences } from './utils/openPreferences';
-
-const HELP_UPDATES_URL = 'https://github.com/cardisoft/cardinal/releases';
 
 let menuInitPromise: Promise<void> | null = null;
 
@@ -22,6 +20,11 @@ async function buildAppMenu(): Promise<void> {
   const aboutItem = await PredefinedMenuItem.new({
     item: { About: null },
     text: i18n.t('menu.about', { appName: name }),
+  });
+  const checkUpdatesItem = await MenuItem.new({
+    id: 'menu.checkUpdates',
+    text: i18n.t('menu.checkUpdates'),
+    action: () => void checkForUpdates(),
   });
   const preferencesItem = await MenuItem.new({
     id: 'menu.preferences',
@@ -44,6 +47,7 @@ async function buildAppMenu(): Promise<void> {
     text: name,
     items: [
       aboutItem,
+      checkUpdatesItem,
       await PredefinedMenuItem.new({ item: 'Separator' }),
       preferencesItem,
       hideItem,
@@ -86,15 +90,15 @@ async function buildAppMenu(): Promise<void> {
     ],
   });
 
-  const getUpdatesItem = await MenuItem.new({
+  const releaseNotesItem = await MenuItem.new({
     id: 'menu.help_updates',
-    text: i18n.t('menu.getUpdates'),
-    action: () => void openUpdatesPage(),
+    text: i18n.t('menu.releaseNotes'),
+    action: () => void checkForUpdates(),
   });
   const helpSubmenu = await Submenu.new({
     id: 'menu.help-root',
     text: i18n.t('menu.help'),
-    items: [getUpdatesItem],
+    items: [releaseNotesItem],
   });
 
   await helpSubmenu.setAsHelpMenuForNSApp().catch(() => {});
@@ -103,14 +107,6 @@ async function buildAppMenu(): Promise<void> {
     items: [appSubmenu, editSubmenu, viewSubmenu, windowSubmenu, helpSubmenu],
   });
   await menu.setAsAppMenu();
-}
-
-async function openUpdatesPage(): Promise<void> {
-  try {
-    await openUrl(HELP_UPDATES_URL);
-  } catch (error) {
-    console.error('Failed to open updates page', error);
-  }
 }
 
 function scheduleMenuBuild(): void {

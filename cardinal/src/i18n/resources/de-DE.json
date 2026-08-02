@@ -142,7 +142,8 @@
     "maximize": "Zoomen",
     "closeWindow": "Fenster schließen",
     "help": "Hilfe",
-    "getUpdates": "Updates abrufen"
+    "checkUpdates": "Nach Updates suchen…",
+    "releaseNotes": "Versionen"
   },
   "preferences": {
     "title": "Einstellungen",
@@ -202,6 +203,23 @@
     "help": "Ein Pfad pro Zeile; eingeschlossene Pfade bleiben indexiert, auch wenn ein übergeordneter Pfad ignoriert wird.",
     "errors": {
       "absolute": "Jeder Pfad muss mit '/' oder '~' beginnen."
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "Alles aktuell",
+      "body": "Cardinal {{version}} ist die neueste Version."
+    },
+    "available": {
+      "title": "Update verfügbar",
+      "body": "Cardinal {{latest}} ist verfügbar. Sie haben {{current}}.",
+      "download": "Laden",
+      "later": "Später"
+    },
+    "failed": {
+      "title": "Suche fehlgeschlagen",
+      "body": "Cardinal konnte GitHub nicht erreichen. Prüfen Sie die Verbindung oder öffnen Sie die Versionsseite im Browser.",
+      "open": "Seite öffnen"
     }
   }
 }

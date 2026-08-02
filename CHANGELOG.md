@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Add "Check for Updates…" to the Cardinal menu. It asks GitHub for the latest release, says whether you are current, and offers the download page only when there is something newer.
+- Fix the Help menu's updates entry, which opened the upstream project's releases rather than this fork's.
 - Add a "Contains" field to the search bar for searching inside files. It writes `content:"…"` into the query, the same way the file-type dropdown writes `type:`.
 - Add icons to the file-type dropdown, and fold Document, PDF, Presentation and Spreadsheet into one "Document" entry. The entry writes an OR of the four groups rather than changing what `type:doc` means.
 - The folder icon in "Search in" now opens a folder picker. Folding the field moved to a chevron beside it, since an icon that looks like "choose a folder" should choose a folder.

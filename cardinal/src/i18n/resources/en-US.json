@@ -142,7 +142,8 @@
     "maximize": "Zoom",
     "closeWindow": "Close Window",
     "help": "Help",
-    "getUpdates": "Get Updates"
+    "checkUpdates": "Check for Updates…",
+    "releaseNotes": "Releases"
   },
   "preferences": {
     "title": "Preferences",
@@ -202,6 +203,23 @@
     "help": "One path per line; included paths stay indexed even under an ignored parent.",
     "errors": {
       "absolute": "Each path must start with '/' or '~'."
+    }
+  },
+  "updates": {
+    "upToDate": {
+      "title": "You're up to date",
+      "body": "Cardinal {{version}} is the latest version."
+    },
+    "available": {
+      "title": "Update available",
+      "body": "Cardinal {{latest}} is available. You have {{current}}.",
+      "download": "Download",
+      "later": "Not now"
+    },
+    "failed": {
+      "title": "Could not check for updates",
+      "body": "Cardinal could not reach GitHub. Check your connection, or open the releases page in your browser.",
+      "open": "Open page"
     }
   }
 }
