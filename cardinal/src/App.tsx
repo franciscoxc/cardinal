@@ -203,6 +203,8 @@ function App() {
     defaultIgnorePaths,
     includePaths,
     defaultIncludePaths,
+    folderSizesEnabled,
+    setFolderSizesEnabled,
     preferencesResetToken,
     handleWatchConfigChange,
     handleResetPreferences,
@@ -293,7 +295,10 @@ function App() {
   );
   // Hiding the Size column is what stops the sums: there is nowhere to show them, so there is no
   // reason to walk a subtree per visible row.
-  const wantFolderSizes = visibleColumns.includes('size');
+  // Both conditions, and neither is redundant: the preference is the user's intent, the column is
+  // whether there is anywhere to put the answer.
+  const sizeColumnVisible = visibleColumns.includes('size');
+  const wantFolderSizes = folderSizesEnabled && sizeColumnVisible;
   const columnsTemplate = useMemo(
     () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
     [visibleColumns],
@@ -518,6 +523,9 @@ function App() {
         sortThreshold={sortThreshold}
         defaultSortThreshold={DEFAULT_SORTABLE_RESULT_THRESHOLD}
         onSortThresholdChange={setSortThreshold}
+        folderSizesEnabled={folderSizesEnabled}
+        onFolderSizesEnabledChange={setFolderSizesEnabled}
+        sizeColumnVisible={sizeColumnVisible}
         trayIconEnabled={trayIconEnabled}
         onTrayIconEnabledChange={setTrayIconEnabled}
         watchRoot={watchRoot ?? defaultWatchRoot}

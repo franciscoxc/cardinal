@@ -163,7 +163,12 @@
     },
     "save": "Salva",
     "reset": "Ripristina valori predefiniti",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "folderSizes": {
+      "label": "Mostra la dimensione delle cartelle",
+      "hint": "Somma il contenuto di ogni cartella visibile. Un totale che non può essere completo è segnato con +.",
+      "needsColumn": "Richiede la colonna Dimensione, che è nascosta."
+    }
   },
   "language": {
     "label": "Lingua",

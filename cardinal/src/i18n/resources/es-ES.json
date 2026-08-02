@@ -163,7 +163,12 @@
     },
     "save": "Guardar",
     "reset": "Restablecer valores predeterminados",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "folderSizes": {
+      "label": "Mostrar tamaño de carpetas",
+      "hint": "Suma lo que contiene cada carpeta visible. Un total que no puede ser completo se marca con +.",
+      "needsColumn": "Requiere la columna Tamaño, que está oculta."
+    }
   },
   "language": {
     "label": "Idioma",

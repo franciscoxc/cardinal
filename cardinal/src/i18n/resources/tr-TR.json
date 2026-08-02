@@ -163,7 +163,12 @@
     },
     "save": "Kaydet",
     "reset": "Varsayılanlara döndür",
-    "close": "Kapat"
+    "close": "Kapat",
+    "folderSizes": {
+      "label": "Klasör boyutlarını göster",
+      "hint": "Görünen her klasörün içeriğini toplar. Tam olamayan bir toplam + ile işaretlenir.",
+      "needsColumn": "Boyut sütunu gerekli, ancak gizli."
+    }
   },
   "language": {
     "label": "Dil",

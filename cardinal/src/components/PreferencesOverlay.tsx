@@ -12,6 +12,10 @@ type PreferencesOverlayProps = {
   onSortThresholdChange: (value: number) => void;
   trayIconEnabled: boolean;
   onTrayIconEnabledChange: (enabled: boolean) => void;
+  folderSizesEnabled: boolean;
+  onFolderSizesEnabledChange: (enabled: boolean) => void;
+  /** The switch has no effect while the Size column is hidden, so it is shown as unavailable. */
+  sizeColumnVisible: boolean;
   watchRoot: string;
   defaultWatchRoot: string;
   onWatchConfigChange: (next: {
@@ -35,6 +39,9 @@ export function PreferencesOverlay({
   onSortThresholdChange,
   trayIconEnabled,
   onTrayIconEnabledChange,
+  folderSizesEnabled,
+  onFolderSizesEnabledChange,
+  sizeColumnVisible,
   watchRoot,
   defaultWatchRoot,
   onWatchConfigChange,
@@ -193,6 +200,31 @@ export function PreferencesOverlay({
                   checked={trayIconEnabled}
                   onChange={(event) => onTrayIconEnabledChange(event.target.checked)}
                   aria-label={t('preferences.trayIcon.label')}
+                />
+                <span className="preferences-switch__track" aria-hidden="true" />
+              </label>
+            </div>
+          </div>
+          <div className="preferences-row">
+            <div className="preferences-row__details">
+              <p className="preferences-label">{t('preferences.folderSizes.label')}</p>
+              <p className="preferences-hint">
+                {sizeColumnVisible
+                  ? t('preferences.folderSizes.hint')
+                  : t('preferences.folderSizes.needsColumn')}
+              </p>
+            </div>
+            <div className="preferences-control">
+              <label className="preferences-switch">
+                <input
+                  className="preferences-switch__input"
+                  type="checkbox"
+                  checked={folderSizesEnabled && sizeColumnVisible}
+                  // Kept rather than cleared when the column is hidden: the stored value is the
+                  // user's intent, and hiding a column should not silently discard it.
+                  disabled={!sizeColumnVisible}
+                  onChange={(event) => onFolderSizesEnabledChange(event.target.checked)}
+                  aria-label={t('preferences.folderSizes.label')}
                 />
                 <span className="preferences-switch__track" aria-hidden="true" />
               </label>

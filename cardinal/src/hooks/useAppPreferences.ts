@@ -6,11 +6,14 @@ import { getBrowserLanguage } from '../i18n/config';
 import { applyThemePreference, persistThemePreference } from '../theme';
 import { setTrayEnabled } from '../tray';
 import { getStoredTrayIconEnabled, persistTrayIconEnabled } from '../trayIconPreference';
+import { useStoredState } from './useStoredState';
 import { setWatchConfig } from '../utils/watchConfig';
 import type { FullDiskAccessStatus } from './useFullDiskAccessPermission';
 import { useIgnorePaths } from './useIgnorePaths';
 import { useIncludePaths } from './useIncludePaths';
 import { useWatchRoot } from './useWatchRoot';
+
+export const FOLDER_SIZES_STORAGE_KEY = 'cardinal.preferences.folderSizes';
 
 type WatchConfigChangePayload = {
   watchRoot: string;
@@ -29,6 +32,8 @@ type UseAppPreferencesResult = {
   isPreferencesOpen: boolean;
   closePreferences: () => void;
   trayIconEnabled: boolean;
+  folderSizesEnabled: boolean;
+  setFolderSizesEnabled: (enabled: boolean) => void;
   setTrayIconEnabled: (enabled: boolean) => void;
   watchRoot: string;
   defaultWatchRoot: string;
@@ -60,6 +65,16 @@ export function useAppPreferences({
   const logicStartedRef = useRef(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [trayIconEnabled, setTrayIconEnabled] = useState<boolean>(() => getStoredTrayIconEnabled());
+  // Off by default: summing a subtree per visible folder is work the app never used to do, and
+  // nobody should pay for it without asking.
+  const [folderSizesEnabled, setFolderSizesEnabled] = useStoredState<boolean>({
+    key: FOLDER_SIZES_STORAGE_KEY,
+    defaultValue: false,
+    read: (raw) => raw === 'true',
+    write: (value) => (value ? 'true' : 'false'),
+    readErrorMessage: 'Failed to read folder size preference',
+    writeErrorMessage: 'Failed to persist folder size preference',
+  });
   const [preferencesResetToken, setPreferencesResetToken] = useState(0);
 
   useEffect(() => {
@@ -151,6 +166,8 @@ export function useAppPreferences({
     isPreferencesOpen,
     closePreferences,
     trayIconEnabled,
+    folderSizesEnabled,
+    setFolderSizesEnabled,
     setTrayIconEnabled,
     watchRoot,
     defaultWatchRoot,

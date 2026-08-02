@@ -163,7 +163,12 @@
     },
     "save": "Speichern",
     "reset": "Standardwerte wiederherstellen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "folderSizes": {
+      "label": "Ordnergrößen anzeigen",
+      "hint": "Summiert den Inhalt jedes sichtbaren Ordners. Eine Summe, die nicht vollständig sein kann, wird mit + markiert.",
+      "needsColumn": "Erfordert die Spalte Größe, die ausgeblendet ist."
+    }
   },
   "language": {
     "label": "Sprache",

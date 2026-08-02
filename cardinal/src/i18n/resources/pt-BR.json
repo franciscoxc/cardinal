@@ -163,7 +163,12 @@
     },
     "save": "Salvar",
     "reset": "Restaurar padrões",
-    "close": "Fechar"
+    "close": "Fechar",
+    "folderSizes": {
+      "label": "Mostrar tamanho das pastas",
+      "hint": "Soma o que cada pasta visível contém. Um total que não pode ser completo é marcado com +.",
+      "needsColumn": "Requer a coluna Tamanho, que está oculta."
+    }
   },
   "language": {
     "label": "Idioma",

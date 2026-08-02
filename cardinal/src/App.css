@@ -182,6 +182,20 @@ main,
   border-radius: 50%;
 }
 
+/* Explanation under a preference label; also carries why a switch is unavailable. */
+.preferences-hint {
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.preferences-switch__input:disabled + .preferences-switch__track {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* === Campo "Contiene": busca dentro de los archivos === */
 .content-search-segment {
   flex: 0 1 min(15rem, 26vw);

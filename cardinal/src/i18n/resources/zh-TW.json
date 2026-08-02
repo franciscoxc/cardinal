@@ -162,7 +162,12 @@
     },
     "save": "儲存",
     "reset": "恢復預設設定",
-    "close": "關閉"
+    "close": "關閉",
+    "folderSizes": {
+      "label": "顯示資料夾大小",
+      "hint": "累加每個可見資料夾的內容。無法完整的總計會標記為 +。",
+      "needsColumn": "需要「大小」欄，但它已隱藏。"
+    }
   },
   "language": {
     "label": "語言",

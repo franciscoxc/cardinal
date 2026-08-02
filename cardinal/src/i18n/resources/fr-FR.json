@@ -163,7 +163,12 @@
     },
     "save": "Enregistrer",
     "reset": "Rétablir les paramètres par défaut",
-    "close": "Fermer"
+    "close": "Fermer",
+    "folderSizes": {
+      "label": "Afficher la taille des dossiers",
+      "hint": "Additionne le contenu de chaque dossier visible. Un total qui ne peut être complet est marqué d'un +.",
+      "needsColumn": "Nécessite la colonne Taille, qui est masquée."
+    }
   },
   "language": {
     "label": "Langue",

@@ -163,7 +163,12 @@
     },
     "save": "Save",
     "reset": "Restore defaults",
-    "close": "Close"
+    "close": "Close",
+    "folderSizes": {
+      "label": "Show folder sizes",
+      "hint": "Adds up what each visible folder holds. A total that cannot be complete is marked with +.",
+      "needsColumn": "Needs the Size column, which is hidden."
+    }
   },
   "language": {
     "label": "Language",

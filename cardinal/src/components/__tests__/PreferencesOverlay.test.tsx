@@ -35,6 +35,9 @@ const baseProps = {
   onReset: vi.fn(),
   themeResetToken: 0,
   onWatchConfigChange: vi.fn(),
+  folderSizesEnabled: false,
+  onFolderSizesEnabledChange: vi.fn(),
+  sizeColumnVisible: true,
 };
 
 describe('PreferencesOverlay', () => {
@@ -162,5 +165,25 @@ describe('PreferencesOverlay', () => {
     fireEvent.keyDown(includePathsInput, { key: 'Escape' });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers folder sizes as off, and as unavailable without the Size column', () => {
+    const onFolderSizesEnabledChange = vi.fn();
+    const { rerender } = render(
+      <PreferencesOverlay {...baseProps} onFolderSizesEnabledChange={onFolderSizesEnabledChange} />,
+    );
+
+    const toggle = screen.getByLabelText('preferences.folderSizes.label') as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    expect(onFolderSizesEnabledChange).toHaveBeenCalledWith(true);
+
+    // With the column hidden the switch has nowhere to show its answer, so it is unavailable —
+    // but the stored intent is not cleared behind the user's back.
+    rerender(<PreferencesOverlay {...baseProps} folderSizesEnabled sizeColumnVisible={false} />);
+    const disabled = screen.getByLabelText('preferences.folderSizes.label') as HTMLInputElement;
+    expect(disabled.disabled).toBe(true);
+    expect(disabled.checked).toBe(false);
+    expect(screen.getByText('preferences.folderSizes.needsColumn')).toBeInTheDocument();
   });
 });
