@@ -5,6 +5,12 @@ import { Menu } from '@tauri-apps/api/menu';
 import type { MenuItemOptions } from '@tauri-apps/api/menu';
 import { useTranslation } from 'react-i18next';
 import { openResultPath } from '../utils/openResultPath';
+import {
+  ALWAYS_VISIBLE_COLUMN,
+  COLUMN_LABEL_KEYS,
+  CONTEXT_COLUMN,
+  type OrderedColumn,
+} from './useColumnOrder';
 import { splitPath } from '../utils/path';
 
 type UseContextMenuResult = {
@@ -12,9 +18,18 @@ type UseContextMenuResult = {
   showHeaderContextMenu: (event: ReactMouseEvent<HTMLElement>) => void;
 };
 
+type ColumnMenuConfig = {
+  order: readonly OrderedColumn[];
+  hidden: readonly OrderedColumn[];
+  /** The snippet column exists only while a content search is running. */
+  contextAvailable: boolean;
+  onToggle: (column: OrderedColumn) => void;
+};
+
 export function useContextMenu(
   autoFitColumns: (() => void) | null = null,
   onQuickLookRequest?: () => void | Promise<void>,
+  columns?: ColumnMenuConfig,
 ): UseContextMenuResult {
   const { t } = useTranslation();
   const writeClipboard = useCallback((text: string) => {
@@ -106,16 +121,38 @@ export function useContextMenu(
       return [];
     }
 
-    return [
-      {
-        id: 'context_menu.reset_column_widths',
-        text: t('contextMenu.resetColumnWidths'),
-        action: () => {
-          autoFitColumns();
-        },
+    const items: MenuItemOptions[] = [];
+
+    if (columns) {
+      for (const column of columns.order) {
+        // The snippet column only exists during a content search, so offering it the rest of the
+        // time would be a switch that visibly does nothing.
+        if (column === CONTEXT_COLUMN && !columns.contextAvailable) {
+          continue;
+        }
+        const isAlwaysVisible = column === ALWAYS_VISIBLE_COLUMN;
+        items.push({
+          id: `context_menu.column.${column}`,
+          text: t(COLUMN_LABEL_KEYS[column]),
+          checked: isAlwaysVisible || !columns.hidden.includes(column),
+          // The name identifies the row; without it the list is a wall of dates and sizes.
+          enabled: !isAlwaysVisible,
+          action: () => columns.onToggle(column),
+        } as MenuItemOptions);
+      }
+      items.push({ item: 'Separator' } as unknown as MenuItemOptions);
+    }
+
+    items.push({
+      id: 'context_menu.reset_column_widths',
+      text: t('contextMenu.resetColumnWidths'),
+      action: () => {
+        autoFitColumns();
       },
-    ];
-  }, [autoFitColumns, t]);
+    });
+
+    return items;
+  }, [autoFitColumns, columns, t]);
 
   const showMenu = useCallback(async (items: MenuItemOptions[]) => {
     if (!items.length) {

@@ -68,7 +68,7 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { colWidths, onResizeStart, autoFitColumns } = useColumnResize();
-  const { columnOrder, moveColumn } = useColumnOrder();
+  const { columnOrder, hiddenColumns, moveColumn, toggleColumn } = useColumnOrder();
   const { caseSensitive, directoryQuery, directoryScopeOpen } = searchParams;
   const { eventColWidths, onEventResizeStart, autoFitEventColumns } = useEventColumnWidths();
   const { t, i18n } = useTranslation();
@@ -149,7 +149,12 @@ function App() {
   const {
     showContextMenu: showFilesContextMenu,
     showHeaderContextMenu: showFilesHeaderContextMenu,
-  } = useContextMenu(autoFitColumns, toggleQuickLook);
+  } = useContextMenu(autoFitColumns, toggleQuickLook, {
+    order: columnOrder,
+    hidden: hiddenColumns,
+    contextAvailable: contentTerms.length > 0,
+    onToggle: toggleColumn,
+  });
 
   const {
     showContextMenu: showEventsContextMenu,
@@ -265,14 +270,26 @@ function App() {
   }, []);
 
   const selectedIndexSet = useMemo(() => new Set(selectedIndices), [selectedIndices]);
-  const showContentContext = contentTerms.length > 0;
-  const fileRowsWidth = showContentContext
+  const searchHasContentTerms = contentTerms.length > 0;
+  const fileRowsWidth = searchHasContentTerms
     ? 'var(--columns-total-with-context)'
     : 'var(--columns-total)';
   // The grid template is built here rather than in CSS because the user owns the column order.
   const visibleColumns = useMemo(
-    () => columnOrder.filter((column) => column !== CONTEXT_COLUMN || showContentContext),
-    [columnOrder, showContentContext],
+    () =>
+      columnOrder.filter(
+        (column) =>
+          (column !== CONTEXT_COLUMN || searchHasContentTerms) && !hiddenColumns.includes(column),
+      ),
+    [columnOrder, hiddenColumns, searchHasContentTerms],
+  );
+
+  // Hiding the snippet column must stop the work behind it, not just the rendering: the terms are
+  // what make `get_nodes_info` read every visible file to cut a snippet out of it.
+  const showContentContext = visibleColumns.includes(CONTEXT_COLUMN);
+  const snippetTerms = useMemo(
+    () => (showContentContext ? contentTerms : []),
+    [contentTerms, showContentContext],
   );
   const columnsTemplate = useMemo(
     () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
@@ -320,7 +337,7 @@ function App() {
           selectedPathsForDrag={selectedPaths}
           caseInsensitive={!caseSensitive}
           highlightTerms={highlightTerms}
-          contentTerms={contentTerms}
+          contentTerms={snippetTerms}
           showContentContext={showContentContext}
           columnOrder={visibleColumns}
           onContextMenu={handleRowContextMenu}
@@ -335,6 +352,7 @@ function App() {
       highlightTerms,
       contentTerms,
       showContentContext,
+      snippetTerms,
       fileRowsWidth,
       visibleColumns,
       columnsTemplate,
@@ -470,7 +488,7 @@ function App() {
               sortDisabled={sortButtonsDisabled}
               sortDisabledTooltip={sortDisabledTooltip}
               showContentContext={showContentContext}
-              contentTerms={contentTerms}
+              contentTerms={snippetTerms}
               caseInsensitive={!caseSensitive}
               columnOrder={visibleColumns}
               onColumnMove={moveColumn}

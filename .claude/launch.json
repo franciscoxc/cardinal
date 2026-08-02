@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "cardinal-vite", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "cardinal", "run", "dev"], "port": 1420 }
+  ]
+}

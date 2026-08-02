@@ -17,6 +17,19 @@ export const DEFAULT_COLUMN_ORDER: OrderedColumn[] = [
 ];
 
 export const COLUMN_ORDER_STORAGE_KEY = 'cardinal.columns.order';
+export const COLUMN_HIDDEN_STORAGE_KEY = 'cardinal.columns.hidden';
+
+/** The name is what identifies a row, so hiding it would leave the list unreadable. */
+export const ALWAYS_VISIBLE_COLUMN: OrderedColumn = 'filename';
+
+export const COLUMN_LABEL_KEYS: Record<OrderedColumn, string> = {
+  filename: 'columns.filename',
+  context: 'columns.context',
+  path: 'columns.path',
+  size: 'columns.size',
+  modified: 'columns.modified',
+  created: 'columns.created',
+};
 
 const isOrderedColumn = (value: unknown): value is OrderedColumn =>
   typeof value === 'string' && DEFAULT_COLUMN_ORDER.includes(value as OrderedColumn);
@@ -32,6 +45,11 @@ const normalize = (value: OrderedColumn[]): OrderedColumn[] => {
   );
   return [...kept, ...DEFAULT_COLUMN_ORDER.filter((column) => !seen.has(column))];
 };
+
+/** Unknown entries are dropped, and the name column can never be hidden. */
+const normalizeHidden = (value: OrderedColumn[]): OrderedColumn[] => [
+  ...new Set(value.filter((c) => isOrderedColumn(c) && c !== ALWAYS_VISIBLE_COLUMN)),
+];
 
 export function useColumnOrder() {
   const [order, setOrder] = useStoredState<OrderedColumn[]>({
@@ -70,7 +88,33 @@ export function useColumnOrder() {
     [order, setOrder],
   );
 
-  const resetOrder = useCallback(() => setOrder(DEFAULT_COLUMN_ORDER), [setOrder]);
+  const [hidden, setHidden] = useStoredState<OrderedColumn[]>({
+    key: COLUMN_HIDDEN_STORAGE_KEY,
+    defaultValue: [],
+    read: (raw) => {
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? normalizeHidden(parsed as OrderedColumn[]) : null;
+    },
+    write: (value) => JSON.stringify(value),
+    normalize: normalizeHidden,
+    readErrorMessage: 'Failed to read hidden columns',
+    writeErrorMessage: 'Failed to persist hidden columns',
+  });
 
-  return { columnOrder: order, moveColumn, resetOrder };
+  const toggleColumn = useCallback(
+    (column: OrderedColumn) => {
+      if (column === ALWAYS_VISIBLE_COLUMN) {
+        return;
+      }
+      setHidden(hidden.includes(column) ? hidden.filter((c) => c !== column) : [...hidden, column]);
+    },
+    [hidden, setHidden],
+  );
+
+  const resetOrder = useCallback(() => {
+    setOrder(DEFAULT_COLUMN_ORDER);
+    setHidden([]);
+  }, [setHidden, setOrder]);
+
+  return { columnOrder: order, hiddenColumns: hidden, moveColumn, toggleColumn, resetOrder };
 }

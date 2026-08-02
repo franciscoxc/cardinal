@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import type { ColumnKey } from '../constants';
 import type { SortKey, SortState } from '../types/sort';
 import { useColumnDrag } from '../hooks/useColumnDrag';
-import { CONTEXT_COLUMN, type OrderedColumn } from '../hooks/useColumnOrder';
+import { COLUMN_LABEL_KEYS, CONTEXT_COLUMN, type OrderedColumn } from '../hooks/useColumnOrder';
 
-const columnMeta: Record<ColumnKey, { labelKey: string; className: string }> = {
-  filename: { labelKey: 'columns.filename', className: 'filename-text' },
-  path: { labelKey: 'columns.path', className: 'path-text' },
-  size: { labelKey: 'columns.size', className: 'size-text' },
-  modified: { labelKey: 'columns.modified', className: 'mtime-text' },
-  created: { labelKey: 'columns.created', className: 'ctime-text' },
+const columnClasses: Record<ColumnKey, string> = {
+  filename: 'filename-text',
+  path: 'path-text',
+  size: 'size-text',
+  modified: 'mtime-text',
+  created: 'ctime-text',
 };
 
 const sortableColumns: Record<ColumnKey, SortKey> = {
@@ -83,8 +83,8 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
               );
             }
 
-            const { labelKey, className } = columnMeta[column];
-            const label = t(labelKey);
+            const className = columnClasses[column];
+            const label = t(COLUMN_LABEL_KEYS[column]);
             const sortKey = sortableColumns[column];
             const isActive = sortState?.key === sortKey;
             const indicatorClasses = ['sort-indicator'];

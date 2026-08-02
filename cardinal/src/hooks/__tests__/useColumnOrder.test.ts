@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { COLUMN_ORDER_STORAGE_KEY, DEFAULT_COLUMN_ORDER, useColumnOrder } from '../useColumnOrder';
+import {
+  COLUMN_HIDDEN_STORAGE_KEY,
+  COLUMN_ORDER_STORAGE_KEY,
+  DEFAULT_COLUMN_ORDER,
+  useColumnOrder,
+} from '../useColumnOrder';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -37,5 +42,38 @@ describe('useColumnOrder', () => {
     const { result } = renderHook(() => useColumnOrder());
     expect(result.current.columnOrder).not.toContain('nope');
     expect(result.current.columnOrder).toHaveLength(DEFAULT_COLUMN_ORDER.length);
+  });
+
+  it('hides and shows a column, and refuses to hide the name', () => {
+    const { result } = renderHook(() => useColumnOrder());
+
+    act(() => result.current.toggleColumn('size'));
+    expect(result.current.hiddenColumns).toContain('size');
+
+    act(() => result.current.toggleColumn('size'));
+    expect(result.current.hiddenColumns).not.toContain('size');
+
+    // Without the name the list is a wall of dates and sizes, so it can never be hidden.
+    act(() => result.current.toggleColumn('filename'));
+    expect(result.current.hiddenColumns).not.toContain('filename');
+  });
+
+  it('repairs a stored hidden list that would leave the name out', () => {
+    window.localStorage.setItem(
+      COLUMN_HIDDEN_STORAGE_KEY,
+      JSON.stringify(['filename', 'nope', 'size', 'size']),
+    );
+    const { result } = renderHook(() => useColumnOrder());
+
+    expect(result.current.hiddenColumns).toEqual(['size']);
+  });
+
+  it('resetting brings every column back', () => {
+    const { result } = renderHook(() => useColumnOrder());
+    act(() => result.current.toggleColumn('path'));
+    act(() => result.current.resetOrder());
+
+    expect(result.current.hiddenColumns).toEqual([]);
+    expect(result.current.columnOrder).toEqual(DEFAULT_COLUMN_ORDER);
   });
 });

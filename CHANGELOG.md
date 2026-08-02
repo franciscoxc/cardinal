@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Show or hide columns from the header's context menu, the way Finder does. The order and the hidden set are both remembered, and the file name can never be hidden — without it the list is a wall of dates and sizes. The snippet column is only offered while a content search is running.
+- Hiding the snippet column now stops the work behind it: the search no longer reads every visible file to cut a snippet out of it.
+
 ## 0.3.3 — 2026-08-02
 - Fix columns not being draggable above the sort limit (20,000 results by default). Sorting is switched off there on purpose, but it was doing so with the `disabled` attribute, which swallows mouse events instead of bubbling them — so the press never reached the header cell and reordering died with it. Reordering is a layout choice and has nothing to do with how many results are on screen.
 
