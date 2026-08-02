@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "Поиск файлов и папок...",
       "events": "Фильтруйте события по пути или имени...",
-      "directory": "Искать в..."
+      "directory": "Искать в… (весь диск)"
     },
     "options": {
       "caseSensitive": "Включить учет регистра",
@@ -16,18 +16,24 @@
       "image": "Изображение",
       "video": "Видео",
       "audio": "Аудио",
-      "doc": "Документ",
-      "pdf": "PDF",
-      "presentation": "Презентация",
-      "spreadsheet": "Таблица",
       "email": "Письмо",
       "archive": "Архив",
       "code": "Код",
       "app": "Программа",
-      "folder": "Папка"
+      "folder": "Папка",
+      "document": "Документ"
     },
     "aria": {
       "searchInput": "Поле поиска"
+    },
+    "directory": {
+      "browse": "Выбрать папку",
+      "close": "Закрыть"
+    },
+    "content": {
+      "label": "Содержит",
+      "hint": "текст внутри",
+      "custom": "задано в строке поиска"
     }
   },
   "stateDisplay": {

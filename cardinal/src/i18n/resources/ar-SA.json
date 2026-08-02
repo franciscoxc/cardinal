@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "ابحث عن الملفات والمجلدات...",
       "events": "رشّح الأحداث حسب المسار أو الاسم...",
-      "directory": "البحث في..."
+      "directory": "البحث في… (القرص بالكامل)"
     },
     "options": {
       "caseSensitive": "تفعيل/إيقاف حساسية حالة الأحرف",
@@ -16,18 +16,24 @@
       "image": "صورة",
       "video": "فيديو",
       "audio": "صوت",
-      "doc": "مستند",
-      "pdf": "PDF",
-      "presentation": "عرض تقديمي",
-      "spreadsheet": "جدول بيانات",
       "email": "بريد",
       "archive": "أرشيف",
       "code": "شيفرة",
       "app": "تطبيق",
-      "folder": "مجلد"
+      "folder": "مجلد",
+      "document": "مستند"
     },
     "aria": {
       "searchInput": "إدخال البحث"
+    },
+    "directory": {
+      "browse": "اختيار مجلد",
+      "close": "إغلاق"
+    },
+    "content": {
+      "label": "يحتوي على",
+      "hint": "نص بالداخل",
+      "custom": "محدد في شريط البحث"
     }
   },
   "stateDisplay": {

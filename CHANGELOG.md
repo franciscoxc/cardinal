@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- Add a "Contains" field to the search bar for searching inside files. It writes `content:"…"` into the query, the same way the file-type dropdown writes `type:`.
+- Add icons to the file-type dropdown, and fold Document, PDF, Presentation and Spreadsheet into one "Document" entry. The entry writes an OR of the four groups rather than changing what `type:doc` means.
+- The folder icon in "Search in" now opens a folder picker. Folding the field moved to a chevron beside it, since an icon that looks like "choose a folder" should choose a folder.
+- Show the default scope in the placeholder: "Search in… (whole disk)".
+- Move the content-snippet column next to the file name, and let columns be reordered by dragging their titles. The order is remembered.
+- Make the icon's sparkles orange; the pale gold disappeared against light backgrounds.
+
 ## 0.2.0 — 2026-08-01
 - Add an accessible name to the search input, so assistive technologies can announce it. Thanks to [@dkattan](https://github.com/dkattan) ([#220](https://github.com/cardisoft/cardinal/pull/220)).
 - Add a file-type dropdown next to the search bar. Picking a type writes it into the query (`type:image`), so the control and the search bar never disagree — and the syntax stays visible instead of hidden behind a menu.

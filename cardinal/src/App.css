@@ -117,6 +117,98 @@ main,
   height: 100vh;
 }
 
+/* === Reordenar columnas arrastrando el título === */
+.header-cell {
+  cursor: grab;
+}
+
+.header-cell--dragging {
+  opacity: 0.45;
+}
+
+/* La línea marca dónde va a caer la columna. */
+.header-cell--drop-target {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* El asa de redimensionar vive dentro de la celda arrastrable: sin esto, tomarla arrastra
+   la columna entera en vez de cambiarle el ancho. */
+.col-resizer {
+  cursor: col-resize;
+}
+
+/* === Campo "Contiene": busca dentro de los archivos === */
+.content-search-segment {
+  flex: 0 1 min(15rem, 26vw);
+  min-width: 6rem;
+  gap: 0;
+  padding-left: 0.6rem;
+  overflow: hidden;
+}
+
+.content-search-label {
+  flex: 0 0 auto;
+  padding-right: 0.4rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  border-right: 1px solid var(--color-border);
+  cursor: text;
+}
+
+#content-search-input {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.92rem;
+  overflow: hidden;
+}
+
+#content-search-input:focus {
+  outline: none;
+}
+
+#content-search-input::placeholder {
+  color: var(--color-muted);
+}
+
+#content-search-input:disabled {
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+/* Cierra el campo de carpeta; el icono de carpeta ahora abre el selector del sistema. */
+.directory-scope-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1.1rem;
+  width: 1.1rem;
+  height: var(--search-segment-height);
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.directory-scope-close svg {
+  width: 0.62rem;
+  height: 0.62rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.directory-scope-close:hover {
+  color: var(--color-text);
+}
+
 /* === Search Bar === */
 .search-container {
   margin: var(--container-padding) var(--container-padding) 0;
@@ -651,7 +743,7 @@ button:active:not(:disabled) {
 
 .scroll-area--with-context .columns {
   grid-template-columns:
-    var(--w-context) var(--w-filename) var(--w-path) var(--w-size) var(--w-modified)
+    var(--w-filename) var(--w-context) var(--w-path) var(--w-size) var(--w-modified)
     var(--w-created);
   width: var(--columns-total-with-context);
   min-width: var(--columns-total-with-context);
@@ -694,7 +786,7 @@ button:active:not(:disabled) {
 
 .scroll-area--with-context .header-row.columns {
   grid-template-columns:
-    var(--w-context) var(--w-filename) var(--w-path) var(--w-size) var(--w-modified)
+    var(--w-filename) var(--w-context) var(--w-path) var(--w-size) var(--w-modified)
     var(--w-created) var(--virtual-scrollbar-width);
 }
 

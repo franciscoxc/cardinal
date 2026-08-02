@@ -1,19 +1,32 @@
 <div align="center">
   <img src="cardinal/mac-icon_1024x1024.png" alt="Cardinal icon" width="120" height="120">
   <h1>Cardinal</h1>
-  <p>Fastest and most accurate file search app for macOS.</p>
+  <p>Fastest and most accurate file search app for macOS — with the search brought up to the surface.</p>
   <p>
     <a href="https://github.com/franciscoxc/cardinal/releases/download/v0.2.0/Cardinal_0.2.0_aarch64.dmg"><img src="https://img.shields.io/badge/Download-Cardinal%200.2.0%20for%20macOS-D62828?style=for-the-badge&logo=apple&logoColor=white" alt="Download Cardinal 0.2.0 for macOS"></a>
   </p>
   <p>
     Signed and notarized · Apple silicon · macOS 12+
   </p>
-  <p>
-    <a href="#using-cardinal">Using Cardinal</a> ·
-    <a href="#building-cardinal">Building Cardinal</a>
-  </p>
   <img src="doc/pub/UI.gif" alt="Cardinal UI preview" width="720">
 </div>
+
+---
+
+> This is a fork of [Cardinal](https://github.com/cardisoft/cardinal) by [cardisoft](https://github.com/cardisoft) — the best Everything alternative for macOS. The engine is theirs and it is excellent; what this fork changes is how much of it you can reach without knowing the syntax first.
+
+## What this fork adds
+
+- **A file-type dropdown** beside the search bar: Image, Video, Audio, Document, Email, Archive, Code, App, Folder. Picking one writes the filter into the query — `type:image` — instead of hiding it, so the bar stays the single source of truth and the syntax is there to be learned.
+- **A "Contains" field** for searching inside files, next to the one for names. It writes `content:"…"` the same way.
+- **A context column** showing the matching text from inside each file, with the searched term highlighted, so a content search tells you *why* every result is there.
+- **`type:email`** — `.eml`, `.emlx`, `.emlxpart`, `.msg`, `.mbox`. Apple Mail's formats are the ones nobody finds by name.
+- **A folder picker.** The folder icon opens one, instead of folding the field away.
+- **Columns you can reorder** by dragging their titles, with the snippet next to the name by default.
+- **Plain wording.** "Folder scope" is now "Search in… (whole disk)", in all 15 languages.
+- **An accessible name on the search input**, contributed upstream by [@dkattan](https://github.com/dkattan) ([#220](https://github.com/cardisoft/cardinal/pull/220)).
+
+Everything below is the original project's documentation, unchanged.
 
 ---
 

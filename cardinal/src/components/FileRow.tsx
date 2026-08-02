@@ -1,5 +1,6 @@
 import React, { memo, useCallback, DragEvent, useRef } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
+import { CONTEXT_COLUMN, type OrderedColumn } from '../hooks/useColumnOrder';
 import { MiddleEllipsisHighlight } from './MiddleEllipsisHighlight';
 import { formatKB, formatTimestamp } from '../utils/format';
 import type { SearchResultItem } from '../types/search';
@@ -23,6 +24,7 @@ type FileRowProps = {
   highlightTerms?: readonly string[];
   contentTerms?: readonly string[];
   showContentContext?: boolean;
+  columnOrder: readonly OrderedColumn[];
 };
 
 export const FileRow = memo(function FileRow({
@@ -38,6 +40,7 @@ export const FileRow = memo(function FileRow({
   highlightTerms,
   contentTerms,
   showContentContext = false,
+  columnOrder,
 }: FileRowProps): React.JSX.Element {
   const pendingSelectRef = useRef<{
     isShift: boolean;
@@ -152,39 +155,71 @@ export const FileRow = memo(function FileRow({
       aria-selected={isSelected}
       title={path}
     >
-      {showContentContext ? (
-        item.contentContext ? (
-          <MiddleEllipsisHighlight
-            className="context-text"
-            text={item.contentContext}
-            highlightTerms={contentTerms}
-            caseInsensitive={caseInsensitive}
-            ellipsisMode="end"
-          />
-        ) : (
-          <span className="context-text muted">—</span>
-        )
-      ) : null}
-      <div className="filename-column">
-        {item.icon ? (
-          <img src={item.icon} alt="icon" className="file-icon" />
-        ) : (
-          <span className="file-icon file-icon-placeholder" aria-hidden="true" />
-        )}
-        <MiddleEllipsisHighlight
-          className="filename-text"
-          text={filename}
-          highlightTerms={highlightTerms}
-          caseInsensitive={caseInsensitive}
-        />
-      </div>
-      {/* Directory column renders the parent path (the filename column already shows the leaf). */}
-      <span className="path-text" title={directoryPath}>
-        {directoryPath}
-      </span>
-      <span className={`size-text ${!sizeText ? 'muted' : ''}`}>{sizeText || '—'}</span>
-      <span className={`mtime-text ${!mtimeText ? 'muted' : ''}`}>{mtimeText || '—'}</span>
-      <span className={`ctime-text ${!ctimeText ? 'muted' : ''}`}>{ctimeText || '—'}</span>
+      {columnOrder.map((column) => {
+        switch (column) {
+          case 'filename':
+            return (
+              <div key={column} className="filename-column">
+                {item.icon ? (
+                  <img src={item.icon} alt="icon" className="file-icon" />
+                ) : (
+                  <span className="file-icon file-icon-placeholder" aria-hidden="true" />
+                )}
+                <MiddleEllipsisHighlight
+                  className="filename-text"
+                  text={filename}
+                  highlightTerms={highlightTerms}
+                  caseInsensitive={caseInsensitive}
+                />
+              </div>
+            );
+          case CONTEXT_COLUMN:
+            if (!showContentContext) {
+              return null;
+            }
+            return item.contentContext ? (
+              <MiddleEllipsisHighlight
+                key={column}
+                className="context-text"
+                text={item.contentContext}
+                highlightTerms={contentTerms}
+                caseInsensitive={caseInsensitive}
+                ellipsisMode="end"
+              />
+            ) : (
+              <span key={column} className="context-text muted">
+                —
+              </span>
+            );
+          case 'path':
+            // The parent path only; the filename column already shows the leaf.
+            return (
+              <span key={column} className="path-text" title={directoryPath}>
+                {directoryPath}
+              </span>
+            );
+          case 'size':
+            return (
+              <span key={column} className={`size-text ${!sizeText ? 'muted' : ''}`}>
+                {sizeText || '—'}
+              </span>
+            );
+          case 'modified':
+            return (
+              <span key={column} className={`mtime-text ${!mtimeText ? 'muted' : ''}`}>
+                {mtimeText || '—'}
+              </span>
+            );
+          case 'created':
+            return (
+              <span key={column} className={`ctime-text ${!ctimeText ? 'muted' : ''}`}>
+                {ctimeText || '—'}
+              </span>
+            );
+          default:
+            return null;
+        }
+      })}
     </div>
   );
 });

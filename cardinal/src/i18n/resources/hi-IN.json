@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "फ़ाइलों और फ़ोल्डरों में खोजें...",
       "events": "पथ या नाम से ईवेंट फ़िल्टर करें...",
-      "directory": "इसमें खोजें..."
+      "directory": "इसमें खोजें… (पूरी डिस्क)"
     },
     "options": {
       "caseSensitive": "केस-सेंसिटिव मिलान टॉगल करें",
@@ -16,18 +16,24 @@
       "image": "छवि",
       "video": "वीडियो",
       "audio": "ऑडियो",
-      "doc": "दस्तावेज़",
-      "pdf": "PDF",
-      "presentation": "प्रस्तुति",
-      "spreadsheet": "स्प्रेडशीट",
       "email": "ईमेल",
       "archive": "संग्रह",
       "code": "कोड",
       "app": "ऐप",
-      "folder": "फ़ोल्डर"
+      "folder": "फ़ोल्डर",
+      "document": "दस्तावेज़"
     },
     "aria": {
       "searchInput": "खोज इनपुट"
+    },
+    "directory": {
+      "browse": "फ़ोल्डर चुनें",
+      "close": "बंद करें"
+    },
+    "content": {
+      "label": "इसमें है",
+      "hint": "अंदर का पाठ",
+      "custom": "खोज बार में सेट है"
     }
   },
   "stateDisplay": {

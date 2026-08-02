@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "搜尋檔案和資料夾…",
       "events": "依路徑或名稱篩選事件…",
-      "directory": "在此處搜尋..."
+      "directory": "在此處搜尋…（整個磁碟）"
     },
     "options": {
       "caseSensitive": "切換區分大小寫比對",
@@ -16,18 +16,24 @@
       "image": "圖片",
       "video": "影片",
       "audio": "音訊",
-      "doc": "文件",
-      "pdf": "PDF",
-      "presentation": "簡報",
-      "spreadsheet": "試算表",
       "email": "郵件",
       "archive": "壓縮檔",
       "code": "程式碼",
       "app": "應用程式",
-      "folder": "資料夾"
+      "folder": "資料夾",
+      "document": "文件"
     },
     "aria": {
       "searchInput": "搜尋輸入"
+    },
+    "directory": {
+      "browse": "選擇資料夾",
+      "close": "關閉"
+    },
+    "content": {
+      "label": "包含",
+      "hint": "檔案內文字",
+      "custom": "已在搜尋列中設定"
     }
   },
   "stateDisplay": {

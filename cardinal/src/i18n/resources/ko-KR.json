@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "파일과 폴더 검색...",
       "events": "경로 또는 이름으로 이벤트 필터링...",
-      "directory": "검색 위치..."
+      "directory": "검색 위치… (디스크 전체)"
     },
     "options": {
       "caseSensitive": "대소문자 구분 검색 전환",
@@ -16,18 +16,24 @@
       "image": "이미지",
       "video": "비디오",
       "audio": "오디오",
-      "doc": "문서",
-      "pdf": "PDF",
-      "presentation": "프레젠테이션",
-      "spreadsheet": "스프레드시트",
       "email": "이메일",
       "archive": "압축 파일",
       "code": "코드",
       "app": "앱",
-      "folder": "폴더"
+      "folder": "폴더",
+      "document": "문서"
     },
     "aria": {
       "searchInput": "검색 입력"
+    },
+    "directory": {
+      "browse": "폴더 선택",
+      "close": "닫기"
+    },
+    "content": {
+      "label": "포함",
+      "hint": "내부 텍스트",
+      "custom": "검색 창에서 설정됨"
     }
   },
   "stateDisplay": {

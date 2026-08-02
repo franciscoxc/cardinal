@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "Пошук файлів і папок...",
       "events": "Фільтруйте події за шляхом чи назвою...",
-      "directory": "Шукати в..."
+      "directory": "Шукати в… (весь диск)"
     },
     "options": {
       "caseSensitive": "Перемкнути врахування регістру",
@@ -16,18 +16,24 @@
       "image": "Зображення",
       "video": "Відео",
       "audio": "Аудіо",
-      "doc": "Документ",
-      "pdf": "PDF",
-      "presentation": "Презентація",
-      "spreadsheet": "Таблиця",
       "email": "Лист",
       "archive": "Архів",
       "code": "Код",
       "app": "Програма",
-      "folder": "Тека"
+      "folder": "Тека",
+      "document": "Документ"
     },
     "aria": {
       "searchInput": "Поле пошуку"
+    },
+    "directory": {
+      "browse": "Вибрати теку",
+      "close": "Закрити"
+    },
+    "content": {
+      "label": "Містить",
+      "hint": "текст усередині",
+      "custom": "задано в рядку пошуку"
     }
   },
   "stateDisplay": {

@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "Search for files and folders...",
       "events": "Filter events by path or name...",
-      "directory": "Search in..."
+      "directory": "Search in… (whole disk)"
     },
     "options": {
       "caseSensitive": "Toggle case-sensitive matching",
@@ -16,18 +16,24 @@
       "image": "Image",
       "video": "Video",
       "audio": "Audio",
-      "doc": "Document",
-      "pdf": "PDF",
-      "presentation": "Presentation",
-      "spreadsheet": "Spreadsheet",
       "email": "Email",
       "archive": "Archive",
       "code": "Code",
       "app": "App",
-      "folder": "Folder"
+      "folder": "Folder",
+      "document": "Document"
     },
     "aria": {
       "searchInput": "Search input"
+    },
+    "directory": {
+      "browse": "Browse for a folder",
+      "close": "Close"
+    },
+    "content": {
+      "label": "Contains",
+      "hint": "text inside",
+      "custom": "set in the search bar"
     }
   },
   "stateDisplay": {

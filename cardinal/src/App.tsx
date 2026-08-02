@@ -9,6 +9,7 @@ import PreferencesOverlay from './components/PreferencesOverlay';
 import StatusBar from './components/StatusBar';
 import type { SearchResultItem } from './types/search';
 import { useColumnResize } from './hooks/useColumnResize';
+import { CONTEXT_COLUMN, useColumnOrder } from './hooks/useColumnOrder';
 import { useContextMenu } from './hooks/useContextMenu';
 import { useFileSearch } from './hooks/useFileSearch';
 import { useEventColumnWidths } from './hooks/useEventColumnWidths';
@@ -67,6 +68,7 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { colWidths, onResizeStart, autoFitColumns } = useColumnResize();
+  const { columnOrder, moveColumn } = useColumnOrder();
   const { caseSensitive, directoryQuery, directoryScopeOpen } = searchParams;
   const { eventColWidths, onEventResizeStart, autoFitEventColumns } = useEventColumnWidths();
   const { t, i18n } = useTranslation();
@@ -267,6 +269,15 @@ function App() {
   const fileRowsWidth = showContentContext
     ? 'var(--columns-total-with-context)'
     : 'var(--columns-total)';
+  // The grid template is built here rather than in CSS because the user owns the column order.
+  const visibleColumns = useMemo(
+    () => columnOrder.filter((column) => column !== CONTEXT_COLUMN || showContentContext),
+    [columnOrder, showContentContext],
+  );
+  const columnsTemplate = useMemo(
+    () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
+    [visibleColumns],
+  );
 
   const handleRowContextMenu = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>, path: string, rowIndex: number) => {
@@ -294,7 +305,7 @@ function App() {
           <div
             key={`placeholder-${rowIndex}`}
             className="row columns row-loading"
-            style={{ ...rowStyle, width: fileRowsWidth }}
+            style={{ ...rowStyle, width: fileRowsWidth, gridTemplateColumns: columnsTemplate }}
           />
         );
       }
@@ -311,6 +322,7 @@ function App() {
           highlightTerms={highlightTerms}
           contentTerms={contentTerms}
           showContentContext={showContentContext}
+          columnOrder={visibleColumns}
           onContextMenu={handleRowContextMenu}
           onSelect={handleRowSelect}
           onOpen={openResultPath}
@@ -324,6 +336,8 @@ function App() {
       contentTerms,
       showContentContext,
       fileRowsWidth,
+      visibleColumns,
+      columnsTemplate,
       caseSensitive,
       selectedIndexSet,
       selectedPaths,
@@ -365,6 +379,12 @@ function App() {
   const onFileTypeQueryChange = useCallback(
     (nextQuery: string) => submitFilesQuery(nextQuery, { immediate: true }),
     [submitFilesQuery],
+  );
+
+  // A path picked in the native dialog is a decision, not typing: search for it right away.
+  const onDirectoryValueChange = useCallback(
+    (nextDirectory: string) => queueDirectorySearch(nextDirectory, { immediate: true }),
+    [queueDirectorySearch],
   );
 
   const showFullDiskAccessOverlay = fullDiskAccessStatus === 'denied';
@@ -410,6 +430,7 @@ function App() {
           caseSensitiveLabel={caseSensitiveLabel}
           fileTypeEnabled={activeTab === 'files'}
           onQueryValueChange={onFileTypeQueryChange}
+          onDirectoryValueChange={onDirectoryValueChange}
           onFocus={handleSearchFocus}
           onBlur={handleSearchBlur}
         />
@@ -451,6 +472,9 @@ function App() {
               showContentContext={showContentContext}
               contentTerms={contentTerms}
               caseInsensitive={!caseSensitive}
+              columnOrder={visibleColumns}
+              onColumnMove={moveColumn}
+              columnsTemplate={columnsTemplate}
             />
           )}
         </div>

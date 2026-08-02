@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "搜索文件和文件夹…",
       "events": "按路径或名称筛选事件…",
-      "directory": "在此处搜索..."
+      "directory": "在此处搜索…（整个磁盘）"
     },
     "options": {
       "caseSensitive": "切换区分大小写匹配",
@@ -16,18 +16,24 @@
       "image": "图片",
       "video": "视频",
       "audio": "音频",
-      "doc": "文档",
-      "pdf": "PDF",
-      "presentation": "演示文稿",
-      "spreadsheet": "电子表格",
       "email": "邮件",
       "archive": "压缩包",
       "code": "代码",
       "app": "应用",
-      "folder": "文件夹"
+      "folder": "文件夹",
+      "document": "文档"
     },
     "aria": {
       "searchInput": "搜索输入"
+    },
+    "directory": {
+      "browse": "选择文件夹",
+      "close": "关闭"
+    },
+    "content": {
+      "label": "包含",
+      "hint": "文件内文本",
+      "custom": "已在搜索栏中设置"
     }
   },
   "stateDisplay": {

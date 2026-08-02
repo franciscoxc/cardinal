@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "ファイルやフォルダを検索...",
       "events": "パスまたは名前でイベントを絞り込む...",
-      "directory": "検索する場所..."
+      "directory": "検索する場所…（ディスク全体）"
     },
     "options": {
       "caseSensitive": "大文字と小文字を区別する",
@@ -16,18 +16,24 @@
       "image": "画像",
       "video": "動画",
       "audio": "オーディオ",
-      "doc": "書類",
-      "pdf": "PDF",
-      "presentation": "プレゼンテーション",
-      "spreadsheet": "スプレッドシート",
       "email": "メール",
       "archive": "アーカイブ",
       "code": "コード",
       "app": "アプリ",
-      "folder": "フォルダ"
+      "folder": "フォルダ",
+      "document": "書類"
     },
     "aria": {
       "searchInput": "検索入力"
+    },
+    "directory": {
+      "browse": "フォルダを選択",
+      "close": "閉じる"
+    },
+    "content": {
+      "label": "内容",
+      "hint": "中のテキスト",
+      "custom": "検索バーで指定済み"
     }
   },
   "stateDisplay": {

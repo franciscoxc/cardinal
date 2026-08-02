@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "Buscar archivos y carpetas...",
       "events": "Filtrar eventos por ruta o nombre...",
-      "directory": "Buscar en..."
+      "directory": "Buscar en… (todo el disco)"
     },
     "options": {
       "caseSensitive": "Activar coincidencia sensible a mayúsculas",
@@ -16,18 +16,24 @@
       "image": "Imagen",
       "video": "Video",
       "audio": "Audio",
-      "doc": "Documento",
-      "pdf": "PDF",
-      "presentation": "Presentación",
-      "spreadsheet": "Hoja de cálculo",
       "email": "Email",
       "archive": "Comprimido",
       "code": "Código",
       "app": "Aplicación",
-      "folder": "Carpeta"
+      "folder": "Carpeta",
+      "document": "Documento"
     },
     "aria": {
       "searchInput": "Entrada de búsqueda"
+    },
+    "directory": {
+      "browse": "Elegir una carpeta",
+      "close": "Cerrar"
+    },
+    "content": {
+      "label": "Contiene",
+      "hint": "texto dentro",
+      "custom": "definido en la barra de búsqueda"
     }
   },
   "stateDisplay": {

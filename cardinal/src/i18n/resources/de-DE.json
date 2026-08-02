@@ -3,7 +3,7 @@
     "placeholder": {
       "files": "Nach Dateien und Ordnern suchen...",
       "events": "Ereignisse nach Pfad oder Name filtern...",
-      "directory": "Suchen in..."
+      "directory": "Suchen in… (ganze Festplatte)"
     },
     "options": {
       "caseSensitive": "Groß-/Kleinschreibung beachten",
@@ -16,18 +16,24 @@
       "image": "Bild",
       "video": "Video",
       "audio": "Audio",
-      "doc": "Dokument",
-      "pdf": "PDF",
-      "presentation": "Präsentation",
-      "spreadsheet": "Tabelle",
       "email": "E-Mail",
       "archive": "Archiv",
       "code": "Code",
       "app": "App",
-      "folder": "Ordner"
+      "folder": "Ordner",
+      "document": "Dokument"
     },
     "aria": {
       "searchInput": "Sucheingabe"
+    },
+    "directory": {
+      "browse": "Ordner auswählen",
+      "close": "Schließen"
+    },
+    "content": {
+      "label": "Enthält",
+      "hint": "Text darin",
+      "custom": "in der Suchleiste festgelegt"
     }
   },
   "stateDisplay": {
