@@ -589,8 +589,11 @@ impl SearchCache {
     /// that never did. Returning the roots rather than a yes/no is what lets a caller walk them on
     /// disk to complete a total.
     pub fn excluded_roots_under(&self, path: &Path) -> Vec<PathBuf> {
-        let ignore = self.ignore_paths();
-        let include = self.include_paths();
+        // Borrow rather than call the public accessors: those hand out an owned copy, and this
+        // runs once per visible folder on every scroll — a viewport used to clone both lists
+        // dozens of times to answer a question that only reads them.
+        let ignore = self.file_nodes.ignore_paths();
+        let include = self.file_nodes.include_paths();
         ignore
             .iter()
             .filter(|ignored| {

@@ -241,4 +241,31 @@ describe('useDataLoader', () => {
     act(() => emitProgress?.([{ slabIndex: 11, bytes: 300, done: true }]));
     expect(result.current.cache.get(11 as SlabIndex)?.folderSize).toBe(1500);
   });
+
+  it('refetches rows when the requested columns change, not only when the search does', async () => {
+    mockedInvoke.mockResolvedValue([buildNodeInfo(11 as SlabIndex)]);
+    const { result, rerender } = renderHook(
+      ({ folderSizes }: { folderSizes: boolean }) =>
+        useDataLoader([11 as SlabIndex], 1, [], false, folderSizes),
+      { initialProps: { folderSizes: false } },
+    );
+
+    await act(async () => {
+      await result.current.ensureRangeLoaded(0, 0);
+    });
+    expect(mockedInvoke).toHaveBeenCalledTimes(1);
+
+    // Turning the Size column back on used to leave every cached row without its total: the rows
+    // were already in the cache, so nothing asked for them again until the next search.
+    mockedInvoke.mockClear();
+    rerender({ folderSizes: true });
+    await act(async () => {
+      await result.current.ensureRangeLoaded(0, 0);
+    });
+
+    expect(mockedInvoke).toHaveBeenCalledWith(
+      'get_nodes_info',
+      expect.objectContaining({ folderSizes: true }),
+    );
+  });
 });

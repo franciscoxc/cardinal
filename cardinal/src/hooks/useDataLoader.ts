@@ -42,15 +42,18 @@ export function useDataLoader(
     return initial;
   });
   const resultsRef = useRef<SlabIndex[]>([]);
-  const contentTermsRef = useRef<readonly string[]>([]);
-  const caseInsensitiveRef = useRef(caseInsensitive);
-  const folderSizesRef = useRef(folderSizes);
-  const deepFolderSizesRef = useRef(deepFolderSizes);
   resultsRef.current = results;
-  contentTermsRef.current = contentTerms;
-  caseInsensitiveRef.current = caseInsensitive;
-  folderSizesRef.current = folderSizes;
-  deepFolderSizesRef.current = deepFolderSizes;
+
+  // What a row's contents depend on besides its index. Kept in one ref because the loader reads
+  // them from an async callback, where the render's values would be stale.
+  const optionsRef = useRef({ contentTerms, caseInsensitive, folderSizes, deepFolderSizes });
+  optionsRef.current = { contentTerms, caseInsensitive, folderSizes, deepFolderSizes };
+
+  // ponytail-keep: the signature has to include the options, not just the result-set version.
+  // Cached rows carry whatever was asked for when they were fetched, and `ensureRangeLoaded`
+  // skips anything already cached — so turning the Size column back on left every visible row
+  // without its total until the next search reset the cache.
+  const requestSignature = `${dataResultsVersion}|${caseInsensitive}|${folderSizes}|${deepFolderSizes}|${contentTerms.join('\u0000')}`;
 
   // Reset cache state whenever the backing result-set changes so slab-index reuse in the
   // backend cannot surface stale row data for a newer search result-set.
@@ -61,7 +64,7 @@ export function useDataLoader(
     const nextCache = new Map<SlabIndex, SearchResultItem>();
     cacheRef.current = nextCache;
     setCache(nextCache);
-  }, [dataResultsVersion]);
+  }, [requestSignature]);
 
   useEffect(() => {
     const unlistenIconUpdate = subscribeIconUpdate((updates: readonly IconUpdatePayload[]) => {
@@ -162,10 +165,7 @@ export function useDataLoader(
       const versionAtRequest = versionRef.current;
       const fetched = await invoke<NodeInfoResponse[]>('get_nodes_info', {
         results: needLoading,
-        contentTerms: contentTermsRef.current,
-        caseInsensitive: caseInsensitiveRef.current,
-        folderSizes: folderSizesRef.current,
-        deepFolderSizes: deepFolderSizesRef.current,
+        ...optionsRef.current,
       });
       if (versionRef.current !== versionAtRequest) {
         // The result-set changed while this request was in flight. Drop the payload instead of
