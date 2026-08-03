@@ -16,9 +16,9 @@ use background::{
 };
 use cardinal_sdk::EventWatcher;
 use commands::{
-    NodeInfoRequest, SearchJob, SearchState, WatchConfigUpdate, activate_main_window,
-    close_quicklook, copy_files_to_clipboard, get_app_status, get_nodes_info, get_sorted_view,
-    hide_main_window, normalize_watch_config, open_in_finder, open_path, search,
+    DeepFolderSizes, NodeInfoRequest, SearchJob, SearchState, WatchConfigUpdate,
+    activate_main_window, close_quicklook, copy_files_to_clipboard, get_app_status, get_nodes_info,
+    get_sorted_view, hide_main_window, normalize_watch_config, open_in_finder, open_path, search,
     set_tray_activation_policy, set_watch_config, start_logic, toggle_main_window,
     toggle_quicklook, trigger_rescan, update_icon_viewport, update_quicklook,
 };
@@ -70,6 +70,8 @@ pub fn run() -> Result<()> {
     let (folder_size_tx, folder_size_rx) = unbounded::<crate::folder_size::WalkProgress>();
     // The worker owns the throttled thread; the loop only queues onto it.
     let folder_size_request_tx = crate::folder_size::spawn_worker(folder_size_tx);
+    let deep_folder_sizes: DeepFolderSizes = Default::default();
+    let deep_folder_sizes_for_updates = deep_folder_sizes.clone();
     let (update_window_state_tx, update_window_state_rx) = bounded::<()>(1);
     let (logic_start_tx, logic_start_rx) = bounded(1);
     LOGIC_START
@@ -126,6 +128,7 @@ pub fn run() -> Result<()> {
             icon_viewport_tx.clone(),
             rescan_tx.clone(),
             watch_config_tx.clone(),
+            deep_folder_sizes,
             update_window_state_tx.clone(),
         ))
         .invoke_handler(tauri::generate_handler![
@@ -197,6 +200,14 @@ pub fn run() -> Result<()> {
                         done: progress.done,
                     })
                     .collect();
+                {
+                    // Kept for the ordering, which re-runs on these same events: without it every
+                    // re-sort would have to walk the disk again to learn what was just reported.
+                    let mut known = deep_folder_sizes_for_updates.lock();
+                    for update in &payload {
+                        known.insert(update.slab_index, update.bytes);
+                    }
+                }
                 let _ = app_handle.emit("folder_size_update", payload);
             }
             info!("folder size thread exited");

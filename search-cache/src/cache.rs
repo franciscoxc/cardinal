@@ -12,7 +12,7 @@ use fswalk::{
     Node, NodeFileType, NodeMetadata, WalkData, should_ignore_path, walk_it,
     walk_it_without_root_chain,
 };
-use hashbrown::HashSet;
+use hashbrown::{HashMap, HashSet};
 use namepool::NamePool;
 use search_cancel::CancellationToken;
 use std::{
@@ -56,6 +56,9 @@ pub struct SubtreeSize {
     /// A descendant could not be read, so `bytes` is a lower bound.
     pub unreadable: bool,
 }
+
+/// Totals already computed, shared across one batch of [`SearchCache::subtree_size_memoized`].
+pub type SubtreeSizeMemo = HashMap<SlabIndex, SubtreeSize>;
 
 #[derive(Debug, Clone)]
 pub struct SearchOutcome {
@@ -633,22 +636,45 @@ impl SearchCache {
         index: SlabIndex,
         cancel: CancellationToken,
     ) -> Option<SubtreeSize> {
-        let mut total = SubtreeSize::default();
+        self.subtree_size_memoized(index, &mut SubtreeSizeMemo::default(), cancel)
+    }
+
+    /// [`SearchCache::subtree_size`] reusing totals already computed into `memo`.
+    ///
+    /// Sizing many folders at once is what sorting a result set by size needs, and result sets
+    /// routinely contain a folder together with its own ancestors. Without a shared memo each
+    /// ancestor re-walks everything its descendants already added up, so the cost grows with the
+    /// nesting depth rather than with the number of nodes. `memo` makes it one visit per node.
+    pub fn subtree_size_memoized(
+        &mut self,
+        index: SlabIndex,
+        memo: &mut SubtreeSizeMemo,
+        cancel: CancellationToken,
+    ) -> Option<SubtreeSize> {
         let mut visited = 0usize;
-        self.subtree_size_recursive(index, &mut total, &mut visited, cancel)?;
-        Some(total)
+        self.subtree_size_recursive(index, memo, &mut visited, cancel)
     }
 
     fn subtree_size_recursive(
         &mut self,
         index: SlabIndex,
-        total: &mut SubtreeSize,
+        memo: &mut SubtreeSizeMemo,
         visited: &mut usize,
         cancel: CancellationToken,
-    ) -> Option<()> {
+    ) -> Option<SubtreeSize> {
+        if let Some(known) = memo.get(&index) {
+            return Some(*known);
+        }
+
         // ponytail-keep: collect the children first. Metadata is filled in lazily, which needs
         // `&mut self`, and holding a borrow of `children` across that call does not compile.
         let children: Vec<SlabIndex> = self.file_nodes[index].children.iter().copied().collect();
+        // ponytail-keep: leaves are left out of the memo on purpose. Recording them would put every
+        // file in the index into the map to remember a zero, which costs far more than the lookup
+        // it saves.
+        let is_leaf = children.is_empty();
+        let mut total = SubtreeSize::default();
+
         for child in children {
             cancel.is_cancelled_sparse(*visited)?;
             *visited += 1;
@@ -664,9 +690,16 @@ impl SearchCache {
                 None => total.unreadable = true,
             }
 
-            self.subtree_size_recursive(child, total, visited, cancel)?;
+            // Cancellation returns before this, so a partial sum is never recorded as a total.
+            let below = self.subtree_size_recursive(child, memo, visited, cancel)?;
+            total.bytes = total.bytes.saturating_add(below.bytes);
+            total.unreadable |= below.unreadable;
         }
-        Some(())
+
+        if !is_leaf {
+            memo.insert(index, total);
+        }
+        Some(total)
     }
 
     pub fn all_subnodes(
@@ -3129,6 +3162,41 @@ mod tests {
         // inode size is not part of what it holds.
         assert_eq!(total.bytes, 3500);
         assert!(!total.unreadable);
+    }
+
+    #[test]
+    fn a_shared_memo_sizes_nested_folders_without_walking_them_twice() {
+        let temp_dir = TempDir::new("subtree_size_memo").unwrap();
+        let dir = temp_dir.path();
+        fs::create_dir_all(dir.join("outer/inner")).unwrap();
+        fs::write(dir.join("outer/a.txt"), vec![b'a'; 1000]).unwrap();
+        fs::write(dir.join("outer/inner/b.txt"), vec![b'b'; 2500]).unwrap();
+
+        let mut cache = SearchCache::walk_fs(dir);
+        let mut folder_named = |name: &str| {
+            guard_indices(cache.search_with_options(
+                name,
+                SearchOptions {
+                    case_insensitive: true,
+                },
+                CancellationToken::noop(),
+            ))
+            .into_iter()
+            .find(|index| cache.file_nodes[*index].file_type_hint() == NodeFileType::Dir)
+            .unwrap_or_else(|| panic!("the {name} directory"))
+        };
+        let outer = folder_named("outer");
+        let inner = folder_named("inner");
+
+        let mut memo = SubtreeSizeMemo::default();
+        let total = cache
+            .subtree_size_memoized(outer, &mut memo, CancellationToken::noop())
+            .unwrap();
+
+        assert_eq!(total.bytes, 3500);
+        // Sizing the ancestor recorded the descendant on the way through, so a result set holding
+        // both folders costs one traversal instead of one per ancestor.
+        assert_eq!(memo.get(&inner).map(|size| size.bytes), Some(2500));
     }
 
     #[test]

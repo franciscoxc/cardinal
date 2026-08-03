@@ -54,7 +54,8 @@
     "sizeIncomplete": "Limite inferior: parte desta pasta não pode ser lida ou está excluída do índice."
   },
   "sorting": {
-    "disabled": "A ordenação está desativada. Muitos resultados ({{limit}}+) podem afetar o desempenho. Ajuste o limite em Preferências."
+    "disabled": "A ordenação está desativada. Muitos resultados ({{limit}}+) podem afetar o desempenho. Ajuste o limite em Preferências.",
+    "disabledFolderSizes": "Não é possível ordenar por tamanho: completar os totais exige varrer cada resultado no disco. Disponível até {{limit}} resultados, ajustável nas Preferências."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Limite de ordenação"
+    },
+    "deepSortingLimit": {
+      "label": "Limite de ordenação com varredura de pastas",
+      "hint": "Ordenar por tamanho espera a varredura de cada pasta do resultado, por isso tem seu próprio limite, mais baixo."
     },
     "save": "Salvar",
     "reset": "Restaurar padrões",

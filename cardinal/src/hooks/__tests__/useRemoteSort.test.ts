@@ -20,6 +20,19 @@ const createDeferred = () => {
   return { promise, resolve };
 };
 
+const sortOptions = (
+  overrides: Partial<Parameters<typeof useRemoteSort>[0]>,
+): Parameters<typeof useRemoteSort>[0] => ({
+  results: [],
+  resultsVersion: 1,
+  locale: 'en-US',
+  folderSizes: false,
+  deepFolderSizes: false,
+  formatDisabledTooltip: () => null,
+  formatSizeDisabledTooltip: () => null,
+  ...overrides,
+});
+
 describe('useRemoteSort', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +48,7 @@ describe('useRemoteSort', () => {
 
   it('bumps displayedResultsVersion when sort projection changes without backend version changes', async () => {
     const results = toSlabIndices([0, 1, 2]);
-    const { result } = renderHook(() => useRemoteSort(results, 1, 'en-US', () => null));
+    const { result } = renderHook(() => useRemoteSort(sortOptions({ results, resultsVersion: 1 })));
 
     await waitFor(() => {
       expect(result.current.displayedResultsVersion).toBeGreaterThan(0);
@@ -50,6 +63,8 @@ describe('useRemoteSort', () => {
       expect(mockedInvoke).toHaveBeenCalledWith('get_sorted_view', {
         results,
         sort: { key: 'filename', direction: 'asc' },
+        folderSizes: false,
+        deepFolderSizes: false,
       });
     });
     await waitFor(() => {
@@ -63,7 +78,7 @@ describe('useRemoteSort', () => {
 
     const { result, rerender } = renderHook(
       ({ items, version }: { items: SlabIndex[]; version: number }) =>
-        useRemoteSort(items, version, 'en-US', () => null),
+        useRemoteSort(sortOptions({ results: items, resultsVersion: version })),
       {
         initialProps: {
           items: first,
@@ -93,7 +108,7 @@ describe('useRemoteSort', () => {
   it('does not sort remotely when the result count exceeds threshold', async () => {
     window.localStorage.setItem('cardinal.sortThreshold', '2');
     const results = toSlabIndices([0, 1, 2]);
-    const { result } = renderHook(() => useRemoteSort(results, 1, 'en-US', () => null));
+    const { result } = renderHook(() => useRemoteSort(sortOptions({ results, resultsVersion: 1 })));
 
     act(() => {
       result.current.handleSortToggle('filename');
@@ -114,7 +129,7 @@ describe('useRemoteSort', () => {
 
     const { result, rerender } = renderHook(
       ({ items, version }: { items: SlabIndex[]; version: number }) =>
-        useRemoteSort(items, version, 'en-US', () => null),
+        useRemoteSort(sortOptions({ results: items, resultsVersion: version })),
       {
         initialProps: {
           items: initial,
@@ -146,7 +161,7 @@ describe('useRemoteSort', () => {
 
   it('allows toggling sort state for empty results without remote sorting', async () => {
     const empty: SlabIndex[] = [];
-    const { result } = renderHook(() => useRemoteSort(empty, 1, 'en-US', () => null));
+    const { result } = renderHook(() => useRemoteSort(sortOptions({ results: empty, resultsVersion: 1 })));
 
     expect(result.current.sortButtonsDisabled).toBe(false);
 
@@ -168,7 +183,7 @@ describe('useRemoteSort', () => {
 
     const { result, rerender } = renderHook(
       ({ items, version }: { items: SlabIndex[]; version: number }) =>
-        useRemoteSort(items, version, 'en-US', () => null),
+        useRemoteSort(sortOptions({ results: items, resultsVersion: version })),
       {
         initialProps: {
           items: initial,
@@ -199,7 +214,7 @@ describe('useRemoteSort', () => {
 
   it('bumps displayedResultsVersion when switching sorted projection on then off', async () => {
     const results = toSlabIndices([0, 1, 2]);
-    const { result } = renderHook(() => useRemoteSort(results, 1, 'en-US', () => null));
+    const { result } = renderHook(() => useRemoteSort(sortOptions({ results, resultsVersion: 1 })));
 
     await waitFor(() => {
       expect(result.current.displayedResultsVersion).toBeGreaterThan(0);
@@ -251,7 +266,7 @@ describe('useRemoteSort', () => {
         return Promise.resolve(null);
       });
 
-    const { result } = renderHook(() => useRemoteSort(results, 1, 'en-US', () => null));
+    const { result } = renderHook(() => useRemoteSort(sortOptions({ results, resultsVersion: 1 })));
 
     act(() => {
       result.current.handleSortToggle('filename');
@@ -275,6 +290,78 @@ describe('useRemoteSort', () => {
 
     await waitFor(() => {
       expect(result.current.displayedResults).toEqual(toSlabIndices([1, 2, 0]));
+    });
+  });
+
+  it('withholds sorting by size, and only by size, past the folder-walk limit', async () => {
+    const results = toSlabIndices([0, 1, 2]);
+    const { result } = renderHook(() =>
+      useRemoteSort(
+        sortOptions({
+          results,
+          folderSizes: true,
+          deepFolderSizes: true,
+          formatSizeDisabledTooltip: (limit) => `walk limit ${limit}`,
+        }),
+      ),
+    );
+
+    act(() => {
+      result.current.setDeepSortThreshold(2);
+    });
+
+    await waitFor(() => {
+      expect(result.current.sizeSortDisabledTooltip).toBe('walk limit 2');
+    });
+    // The general limit is untouched, so every other column keeps working.
+    expect(result.current.canSort).toBe(true);
+    expect(result.current.sortDisabledTooltip).toBeNull();
+
+    act(() => {
+      result.current.handleSortToggle('size');
+    });
+    expect(result.current.sortState).toBeNull();
+
+    act(() => {
+      result.current.handleSortToggle('mtime');
+    });
+    expect(result.current.sortState).toEqual({ key: 'mtime', direction: 'asc' });
+  });
+
+  it('queues the disk walks once and re-orders on their progress without restarting them', async () => {
+    const results = toSlabIndices([0, 1, 2]);
+    const { result } = renderHook(() =>
+      useRemoteSort(sortOptions({ results, folderSizes: true, deepFolderSizes: true })),
+    );
+
+    act(() => {
+      result.current.handleSortToggle('size');
+    });
+
+    await waitFor(() => {
+      expect(mockedInvoke).toHaveBeenCalledWith('get_sorted_view', {
+        results,
+        sort: { key: 'size', direction: 'asc' },
+        folderSizes: true,
+        deepFolderSizes: true,
+      });
+    });
+    expect(result.current.deepSortOwnsWalks).toBe(true);
+
+    mockedInvoke.mockClear();
+    act(() => {
+      result.current.refreshSort();
+    });
+
+    // A refresh reads the totals already reported; asking for the walks again would open a newer
+    // generation and cancel the ones still running.
+    await waitFor(() => {
+      expect(mockedInvoke).toHaveBeenCalledWith('get_sorted_view', {
+        results,
+        sort: { key: 'size', direction: 'asc' },
+        folderSizes: true,
+        deepFolderSizes: false,
+      });
     });
   });
 });

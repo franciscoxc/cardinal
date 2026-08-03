@@ -1,5 +1,5 @@
 use fswalk::NodeFileType;
-use search_cache::{SearchResultNode, SlabIndex, SlabNodeMetadataCompact};
+use search_cache::{SearchResultNode, SlabIndex};
 use serde::Deserialize;
 use std::{cmp::Ordering as StdOrdering, path::Path};
 
@@ -33,10 +33,16 @@ pub(crate) struct SortEntry {
     node: SearchResultNode,
     path_key: String,
     name_key: String,
+    /// What the Size column is showing for a folder, when folder totals are turned on.
+    folder_size: Option<i64>,
 }
 
 impl SortEntry {
-    pub(crate) fn new(slab_index: SlabIndex, node: SearchResultNode) -> Self {
+    pub(crate) fn new(
+        slab_index: SlabIndex,
+        node: SearchResultNode,
+        folder_size: Option<i64>,
+    ) -> Self {
         let path_key = normalize_path(&node.path);
         let name_key = extract_filename(&node);
         Self {
@@ -44,6 +50,7 @@ impl SortEntry {
             node,
             path_key,
             name_key,
+            folder_size,
         }
     }
 }
@@ -64,8 +71,16 @@ fn extract_filename(node: &SearchResultNode) -> String {
         .unwrap_or_else(|| node.path.to_string_lossy().into_owned())
 }
 
-fn metadata_numeric(meta: &SlabNodeMetadataCompact, key: SortKeyPayload) -> i64 {
-    let Some(meta_ref) = meta.as_ref() else {
+fn sort_numeric(entry: &SortEntry, key: SortKeyPayload) -> i64 {
+    // ponytail-keep: a folder's total wins over its metadata size. `meta_ref.size()` is the size of
+    // the directory inode — a few hundred bytes, near enough the same for every folder — so sorting
+    // on it made every folder tie and fall back to name order while the column showed the real
+    // total. Anything the user can see has to be what the ordering uses.
+    if let (SortKeyPayload::Size, Some(bytes)) = (key, entry.folder_size) {
+        return bytes;
+    }
+
+    let Some(meta_ref) = entry.node.metadata.as_ref() else {
         return i64::MIN;
     };
     match key {
@@ -103,8 +118,8 @@ fn compare_entries(a: &SortEntry, b: &SortEntry, sort: &SortStatePayload) -> Std
             .then_with(|| type_order(&a.node).cmp(&type_order(&b.node)))
             .then_with(|| a.path_key.cmp(&b.path_key)),
         SortKeyPayload::Size | SortKeyPayload::Mtime | SortKeyPayload::Ctime => {
-            metadata_numeric(&a.node.metadata, sort.key)
-                .cmp(&metadata_numeric(&b.node.metadata, sort.key))
+            sort_numeric(a, sort.key)
+                .cmp(&sort_numeric(b, sort.key))
                 .then_with(|| a.name_key.cmp(&b.name_key))
                 .then_with(|| type_order(&a.node).cmp(&type_order(&b.node)))
                 .then_with(|| a.path_key.cmp(&b.path_key))
@@ -121,6 +136,7 @@ fn compare_entries(a: &SortEntry, b: &SortEntry, sort: &SortStatePayload) -> Std
 mod tests {
     use super::*;
     use fswalk::NodeMetadata;
+    use search_cache::SlabNodeMetadataCompact;
     use std::path::PathBuf;
 
     fn entry_with_metadata(
@@ -128,12 +144,21 @@ mod tests {
         path: &str,
         metadata: SlabNodeMetadataCompact,
     ) -> SortEntry {
+        entry_with_folder_size(slab_index, path, metadata, None)
+    }
+
+    fn entry_with_folder_size(
+        slab_index: usize,
+        path: &str,
+        metadata: SlabNodeMetadataCompact,
+        folder_size: Option<i64>,
+    ) -> SortEntry {
         let node = SearchResultNode {
             path: PathBuf::from(path),
             metadata,
         };
 
-        SortEntry::new(SlabIndex::new(slab_index), node)
+        SortEntry::new(SlabIndex::new(slab_index), node, folder_size)
     }
 
     fn metadata_with_type(r#type: NodeFileType, size: u64) -> SlabNodeMetadataCompact {
@@ -195,5 +220,40 @@ mod tests {
             vec![0, 2, 1],
             "directories stay ahead when size and names match, while files fall back to path order"
         );
+    }
+
+    #[test]
+    fn size_sort_ranks_folders_by_what_they_hold() {
+        let sort_state = SortStatePayload {
+            key: SortKeyPayload::Size,
+            direction: SortDirectionPayload::Desc,
+        };
+        // Every directory inode reports the same handful of bytes, which is why the totals have to
+        // reach the comparison: without them these three tie and come out in name order.
+        let mut entries = vec![
+            entry_with_folder_size(
+                0,
+                "/tmp/a",
+                metadata_with_type(NodeFileType::Dir, 96),
+                Some(5),
+            ),
+            entry_with_folder_size(
+                1,
+                "/tmp/b",
+                metadata_with_type(NodeFileType::Dir, 96),
+                Some(9_000),
+            ),
+            entry_with_folder_size(
+                2,
+                "/tmp/c",
+                metadata_with_type(NodeFileType::Dir, 96),
+                Some(700),
+            ),
+        ];
+
+        sort_entries(&mut entries, &sort_state);
+        let order: Vec<usize> = entries.iter().map(|entry| entry.slab_index.get()).collect();
+
+        assert_eq!(order, vec![1, 2, 0], "biggest folder first");
     }
 }

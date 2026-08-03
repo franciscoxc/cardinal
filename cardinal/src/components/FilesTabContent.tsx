@@ -37,6 +37,7 @@ type FilesTabContentProps = {
   onSortToggle: (sortKey: SortKey) => void;
   sortDisabled: boolean;
   sortDisabledTooltip: string | null;
+  sizeSortDisabledTooltip: string | null;
   showContentContext: boolean;
   contentTerms: readonly string[];
   caseInsensitive: boolean;
@@ -67,6 +68,7 @@ export function FilesTabContent({
   onSortToggle,
   sortDisabled,
   sortDisabledTooltip,
+  sizeSortDisabledTooltip,
   showContentContext,
   contentTerms,
   caseInsensitive,
@@ -86,6 +88,7 @@ export function FilesTabContent({
         onSortToggle={onSortToggle}
         sortDisabled={sortDisabled}
         sortDisabledTooltip={sortDisabledTooltip}
+        sizeSortDisabledTooltip={sizeSortDisabledTooltip}
         showContentContext={showContentContext}
         columnOrder={columnOrder}
         onColumnMove={onColumnMove}

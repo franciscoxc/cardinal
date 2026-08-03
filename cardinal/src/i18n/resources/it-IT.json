@@ -54,7 +54,8 @@
     "sizeIncomplete": "Limite inferiore: parte di questa cartella non è leggibile o è esclusa dall'indice."
   },
   "sorting": {
-    "disabled": "L'ordinamento è disattivato. Troppi risultati ({{limit}}+) potrebbero influire sulle prestazioni. Puoi regolare la soglia in Preferenze."
+    "disabled": "L'ordinamento è disattivato. Troppi risultati ({{limit}}+) potrebbero influire sulle prestazioni. Puoi regolare la soglia in Preferenze.",
+    "disabledFolderSizes": "Ordinamento per dimensione non disponibile: completare i totali richiede di scansionare ogni risultato su disco. Disponibile fino a {{limit}} risultati, regolabile nelle Preferenze."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Limite ordinamento"
+    },
+    "deepSortingLimit": {
+      "label": "Limite di ordinamento con scansione delle cartelle",
+      "hint": "Ordinare per dimensione attende la scansione di ogni cartella del risultato, quindi ha un limite proprio, più basso."
     },
     "save": "Salva",
     "reset": "Ripristina valori predefiniti",

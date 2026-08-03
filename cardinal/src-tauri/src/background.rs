@@ -13,7 +13,8 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use rayon::spawn;
 use search_cache::{
-    HandleFSEError, NodeFileType, SearchCache, SearchOptions, SearchResultNode, SlabIndex, WalkData,
+    HandleFSEError, NodeFileType, SearchCache, SearchOptions, SearchResultNode, SlabIndex,
+    SubtreeSizeMemo, WalkData,
 };
 use search_cancel::CancellationToken;
 use serde::Serialize;
@@ -268,6 +269,10 @@ fn compute_folder_sizes(
     walk: Option<(CancellationToken, &Sender<WalkRequest>)>,
 ) -> Vec<Option<FolderSize>> {
     let token = CancellationToken::noop();
+    // One memo for the whole batch: sorting asks for every result at once, and a result set holds
+    // nested folders often enough that re-walking each ancestor's descendants is the difference
+    // between one traversal and one per level.
+    let mut memo = SubtreeSizeMemo::default();
     slab_indices
         .iter()
         .zip(nodes)
@@ -275,7 +280,7 @@ fn compute_folder_sizes(
             if node.metadata.as_ref()?.r#type() != NodeFileType::Dir {
                 return None;
             }
-            let total = cache.subtree_size(index, token)?;
+            let total = cache.subtree_size_memoized(index, &mut memo, token)?;
             let excluded_roots = cache.excluded_roots_under(node.path.as_ref());
 
             if let Some((walk_token, request_tx)) = walk

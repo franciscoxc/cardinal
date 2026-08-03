@@ -54,7 +54,8 @@
     "sizeIncomplete": "Alt sınır: Bu klasörün bir kısmı okunamıyor veya dizin dışında."
   },
   "sorting": {
-    "disabled": "Sıralama devre dışı. Çok fazla sonuç ({{limit}}+) performansı etkileyebilir. Eşiği Tercihler'de ayarlayabilirsiniz."
+    "disabled": "Sıralama devre dışı. Çok fazla sonuç ({{limit}}+) performansı etkileyebilir. Eşiği Tercihler'de ayarlayabilirsiniz.",
+    "disabledFolderSizes": "Boyuta göre sıralama kullanılamıyor: toplamları tamamlamak her sonucu diskte taramayı gerektirir. {{limit}} sonuca kadar kullanılabilir, Tercihler'den ayarlanabilir."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Sıralama sınırı"
+    },
+    "deepSortingLimit": {
+      "label": "Klasör taramalı sıralama sınırı",
+      "hint": "Boyuta göre sıralama sonuçtaki her klasörün taranmasını bekler, bu yüzden kendi daha düşük sınırı vardır."
     },
     "save": "Kaydet",
     "reset": "Varsayılanlara döndür",

@@ -91,7 +91,18 @@ pub struct FolderSize {
 struct SortedViewCache {
     slab_indices: Vec<SlabIndex>,
     nodes: Vec<SearchResultNode>,
+    /// Empty when the cached request did not ask for folder totals, which is not the same as
+    /// "asked and got none": a sort by size must not reuse an entry filled in without them.
+    folder_sizes: Vec<Option<FolderSize>>,
 }
+
+/// Totals the background walk has finished, kept so an ordering can use them.
+///
+/// The walk streams its running total to the UI and nothing else remembered it, so re-sorting
+/// would have had to walk the disk again — several times a second, since the progress events are
+/// what triggers the re-sort. Keyed by slab index and dropped when a new search starts, which is
+/// also when the walks for the previous result set are abandoned.
+pub type DeepFolderSizes = std::sync::Arc<Mutex<std::collections::HashMap<u64, i64>>>;
 
 pub struct SearchState {
     search_tx: Sender<SearchJob>,
@@ -100,6 +111,7 @@ pub struct SearchState {
     rescan_tx: Sender<CancellationToken>,
     watch_config_tx: Sender<WatchConfigUpdate>,
     sorted_view_cache: Mutex<Option<SortedViewCache>>,
+    deep_folder_sizes: DeepFolderSizes,
     pub(crate) update_window_state_tx: Sender<()>,
 }
 
@@ -110,6 +122,7 @@ impl SearchState {
         icon_viewport_tx: Sender<(u64, Vec<SlabIndex>)>,
         rescan_tx: Sender<CancellationToken>,
         watch_config_tx: Sender<WatchConfigUpdate>,
+        deep_folder_sizes: DeepFolderSizes,
         update_window_state_tx: Sender<()>,
     ) -> Self {
         Self {
@@ -119,12 +132,9 @@ impl SearchState {
             rescan_tx,
             watch_config_tx,
             sorted_view_cache: Mutex::new(None),
+            deep_folder_sizes,
             update_window_state_tx,
         }
-    }
-
-    fn request_nodes(&self, slab_indices: Vec<SlabIndex>) -> Vec<SearchResultNode> {
-        self.request_node_info(slab_indices, false, false).nodes
     }
 
     fn request_node_info(
@@ -158,26 +168,41 @@ impl SearchState {
         })
     }
 
-    fn fetch_sorted_nodes(&self, slab_indices: &[SlabIndex]) -> Vec<SearchResultNode> {
+    fn fetch_sorted_nodes(
+        &self,
+        slab_indices: &[SlabIndex],
+        folder_sizes: bool,
+        deep_folder_sizes: bool,
+    ) -> (Vec<SearchResultNode>, Vec<Option<FolderSize>>) {
         if slab_indices.is_empty() {
-            return Vec::new();
+            return (Vec::new(), Vec::new());
         }
 
         let mut cache_guard = self.sorted_view_cache.lock();
         if let Some(cached) = cache_guard
             .as_ref()
             .filter(|cache| cache.slab_indices == slab_indices)
-            .map(|cache| cache.nodes.clone())
+            // Totals are what re-sorting during a walk reuses; without this an entry cached by an
+            // earlier sort on another column would answer a sort by size with no sizes at all.
+            .filter(|cache| !folder_sizes || !cache.folder_sizes.is_empty())
+            .map(|cache| (cache.nodes.clone(), cache.folder_sizes.clone()))
         {
             return cached;
         }
 
-        let nodes = self.request_nodes(slab_indices.to_vec());
+        let response =
+            self.request_node_info(slab_indices.to_vec(), folder_sizes, deep_folder_sizes);
         *cache_guard = Some(SortedViewCache {
             slab_indices: slab_indices.to_vec(),
-            nodes: nodes.clone(),
+            nodes: response.nodes.clone(),
+            folder_sizes: response.folder_sizes.clone(),
         });
-        nodes
+        (response.nodes, response.folder_sizes)
+    }
+
+    /// Forgets the totals the background walk reported: they belong to the previous result set.
+    fn clear_deep_folder_sizes(&self) {
+        self.deep_folder_sizes.lock().clear();
     }
 }
 
@@ -341,7 +366,13 @@ pub async fn search(
     search_activity::note_search_activity();
 
     let options = options.unwrap_or_default();
-    let content_terms = query.as_deref().map(content_terms_of_query).unwrap_or_default();
+    let content_terms = query
+        .as_deref()
+        .map(content_terms_of_query)
+        .unwrap_or_default();
+    // Totals walked for the previous result set say nothing about this one, and the walks behind
+    // them are about to be abandoned anyway.
+    state.clear_deep_folder_sizes();
     let cancellation_token = CancellationToken::new_search();
     let (result_tx, result_rx) = bounded(1);
     if let Err(e) = state.search_tx.send(SearchJob {
@@ -445,6 +476,8 @@ pub fn get_nodes_info(
 pub fn get_sorted_view(
     results: Vec<SlabIndex>,
     sort: Option<SortStatePayload>,
+    folder_sizes: Option<bool>,
+    deep_folder_sizes: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Vec<SlabIndex> {
     if results.is_empty() || sort.is_none() {
@@ -452,11 +485,34 @@ pub fn get_sorted_view(
     }
 
     let sort_state = sort.expect("checked above");
-    let nodes = state.fetch_sorted_nodes(&results);
+    let want_folder_sizes = folder_sizes.unwrap_or(false);
+    let (nodes, sizes) = state.fetch_sorted_nodes(
+        &results,
+        want_folder_sizes,
+        deep_folder_sizes.unwrap_or(false),
+    );
+    // What the walk has finished beats what the index alone could add up, and it is only ever
+    // larger: the walk starts from the indexed sum and grows it.
+    let walked = want_folder_sizes.then(|| state.deep_folder_sizes.lock().clone());
+
     let mut entries: Vec<SortEntry> = results
         .into_iter()
         .zip(nodes)
-        .map(|(slab_index, node)| SortEntry::new(slab_index, node))
+        .enumerate()
+        .map(|(position, (slab_index, node))| {
+            let folder_size = sizes
+                .get(position)
+                .copied()
+                .flatten()
+                .map(|size| size.bytes)
+                .map(|indexed| {
+                    walked
+                        .as_ref()
+                        .and_then(|walked| walked.get(&(slab_index.get() as u64)).copied())
+                        .unwrap_or(indexed)
+                });
+            SortEntry::new(slab_index, node, folder_size)
+        })
         .collect();
 
     sort_entries(&mut entries, &sort_state);

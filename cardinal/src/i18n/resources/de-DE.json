@@ -54,7 +54,8 @@
     "sizeIncomplete": "Untergrenze: Ein Teil dieses Ordners ist unlesbar oder vom Index ausgeschlossen."
   },
   "sorting": {
-    "disabled": "Sortieren ist deaktiviert. Zu viele Ergebnisse ({{limit}}+) können die Leistung beeinträchtigen. Sie können den Schwellenwert in den Einstellungen anpassen."
+    "disabled": "Sortieren ist deaktiviert. Zu viele Ergebnisse ({{limit}}+) können die Leistung beeinträchtigen. Sie können den Schwellenwert in den Einstellungen anpassen.",
+    "disabledFolderSizes": "Sortieren nach Größe ist nicht verfügbar: Für vollständige Summen muss jedes Ergebnis auf der Festplatte durchlaufen werden. Verfügbar bis {{limit}} Ergebnisse, anpassbar in den Einstellungen."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Sortierlimit"
+    },
+    "deepSortingLimit": {
+      "label": "Sortiergrenze mit Ordnerdurchlauf",
+      "hint": "Das Sortieren nach Größe wartet auf den Durchlauf jedes Ordners im Ergebnis und hat daher eine eigene, niedrigere Grenze."
     },
     "save": "Speichern",
     "reset": "Standardwerte wiederherstellen",

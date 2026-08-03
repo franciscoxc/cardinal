@@ -54,7 +54,8 @@
     "sizeIncomplete": "Borne inférieure : une partie de ce dossier est illisible ou exclue de l'index."
   },
   "sorting": {
-    "disabled": "Le tri est désactivé. Trop de résultats ({{limit}}+) peuvent affecter les performances. Vous pouvez ajuster le seuil dans les Préférences."
+    "disabled": "Le tri est désactivé. Trop de résultats ({{limit}}+) peuvent affecter les performances. Vous pouvez ajuster le seuil dans les Préférences.",
+    "disabledFolderSizes": "Tri par taille indisponible : compléter les totaux exige de parcourir chaque résultat sur le disque. Disponible jusqu'à {{limit}} résultats, ajustable dans les Préférences."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Limite de tri"
+    },
+    "deepSortingLimit": {
+      "label": "Limite de tri avec parcours des dossiers",
+      "hint": "Le tri par taille attend le parcours de chaque dossier du résultat : il a donc sa propre limite, plus basse."
     },
     "save": "Enregistrer",
     "reset": "Rétablir les paramètres par défaut",

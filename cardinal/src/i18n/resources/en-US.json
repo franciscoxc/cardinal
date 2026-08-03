@@ -54,7 +54,8 @@
     "sizeIncomplete": "Lower bound: part of this folder is unreadable or excluded from the index."
   },
   "sorting": {
-    "disabled": "Sorting is disabled. Too many results ({{limit}}+) may impact performance. You can adjust the threshold in Preferences."
+    "disabled": "Sorting is disabled. Too many results ({{limit}}+) may impact performance. You can adjust the threshold in Preferences.",
+    "disabledFolderSizes": "Sorting by size is unavailable: completing folder totals means walking every result on disk. Available up to {{limit}} results, adjustable in Preferences."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Sorting limit"
+    },
+    "deepSortingLimit": {
+      "label": "Sorting limit with folder walk",
+      "hint": "Ordering by size waits for every folder in the result set to be walked, so it has its own, lower limit."
     },
     "save": "Save",
     "reset": "Restore defaults",

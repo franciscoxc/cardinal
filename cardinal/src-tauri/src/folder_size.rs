@@ -5,7 +5,7 @@
 //! thread, throttled, and reports as it goes: a partial total is still a true lower bound, so the
 //! number can grow on screen instead of appearing at the end.
 
-use crossbeam_channel::{Receiver, Sender, bounded};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use search_cancel::CancellationToken;
 use std::{
     fs,
@@ -128,7 +128,11 @@ fn walk_roots(request: &WalkRequest, progress_tx: &Sender<WalkProgress>) {
 
 /// Starts the worker and returns the channel to queue walks on.
 pub fn spawn_worker(progress_tx: Sender<WalkProgress>) -> Sender<WalkRequest> {
-    let (request_tx, request_rx): (Sender<WalkRequest>, Receiver<WalkRequest>) = bounded(64);
+    // ponytail-keep: unbounded. This was a bounded(64) queue, which is plenty for one viewport but
+    // silently drops the rest when an ordering by size asks for every folder in the result set —
+    // and a dropped request is a folder that never grows past its indexed total. Requests are
+    // cheap and a stale generation is discarded on receipt, so the queue drains rather than grows.
+    let (request_tx, request_rx): (Sender<WalkRequest>, Receiver<WalkRequest>) = unbounded();
 
     thread::Builder::new()
         .name("folder-size".into())
@@ -151,7 +155,8 @@ pub fn spawn_worker(progress_tx: Sender<WalkProgress>) -> Sender<WalkRequest> {
 /// Bytes held under `roots`, walked to completion. Used by the tests; the app streams instead.
 #[cfg(test)]
 pub fn walk_roots_blocking(roots: Vec<PathBuf>) -> i64 {
-    let (tx, rx) = bounded(64);
+    // Nothing reads until the walk returns, so a bounded queue would deadlock on a long enough one.
+    let (tx, rx) = unbounded();
     walk_roots(
         &WalkRequest {
             slab_index: 0,

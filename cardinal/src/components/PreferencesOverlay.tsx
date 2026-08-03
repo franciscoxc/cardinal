@@ -10,6 +10,9 @@ type PreferencesOverlayProps = {
   sortThreshold: number;
   defaultSortThreshold: number;
   onSortThresholdChange: (value: number) => void;
+  deepSortThreshold: number;
+  defaultDeepSortThreshold: number;
+  onDeepSortThresholdChange: (value: number) => void;
   trayIconEnabled: boolean;
   onTrayIconEnabledChange: (enabled: boolean) => void;
   folderSizesEnabled: boolean;
@@ -39,6 +42,9 @@ export function PreferencesOverlay({
   sortThreshold,
   defaultSortThreshold,
   onSortThresholdChange,
+  deepSortThreshold,
+  defaultDeepSortThreshold,
+  onDeepSortThresholdChange,
   trayIconEnabled,
   onTrayIconEnabledChange,
   folderSizesEnabled,
@@ -58,6 +64,9 @@ export function PreferencesOverlay({
 }: PreferencesOverlayProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const [thresholdInput, setThresholdInput] = useState<string>(() => sortThreshold.toString());
+  const [deepThresholdInput, setDeepThresholdInput] = useState<string>(() =>
+    deepSortThreshold.toString(),
+  );
   const [watchRootInput, setWatchRootInput] = useState<string>(() => watchRoot);
   const [ignorePathsInput, setIgnorePathsInput] = useState<string>(() => ignorePaths.join('\n'));
   const [includePathsInput, setIncludePathsInput] = useState<string>(() => includePaths.join('\n'));
@@ -83,7 +92,8 @@ export function PreferencesOverlay({
       return;
     }
     setThresholdInput(sortThreshold.toString());
-  }, [open, sortThreshold]);
+    setDeepThresholdInput(deepSortThreshold.toString());
+  }, [open, sortThreshold, deepSortThreshold]);
 
   useEffect(() => {
     if (!open) {
@@ -94,28 +104,52 @@ export function PreferencesOverlay({
     setIncludePathsInput(includePaths.join('\n'));
   }, [open, watchRoot, ignorePaths, includePaths]);
 
-  const commitThreshold = useCallback(() => {
-    const numericText = thresholdInput.replace(/[^\d]/g, '');
-    if (!numericText) {
-      setThresholdInput(sortThreshold.toString());
-      return;
-    }
-    const parsed = Number.parseInt(numericText, 10);
-    if (Number.isNaN(parsed)) {
-      setThresholdInput(sortThreshold.toString());
-      return;
-    }
-    const normalized = Math.max(1, Math.round(parsed));
-    onSortThresholdChange(normalized);
-    setThresholdInput(normalized.toString());
-  }, [onSortThresholdChange, sortThreshold, thresholdInput]);
+  const commitNumberInput = useCallback(
+    (
+      text: string,
+      current: number,
+      apply: (value: number) => void,
+      show: (value: string) => void,
+    ) => {
+      const numericText = text.replace(/[^\d]/g, '');
+      const parsed = numericText ? Number.parseInt(numericText, 10) : Number.NaN;
+      if (Number.isNaN(parsed)) {
+        show(current.toString());
+        return;
+      }
+      const normalized = Math.max(1, Math.round(parsed));
+      apply(normalized);
+      show(normalized.toString());
+    },
+    [],
+  );
 
-  const handleThresholdChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = event.target.value;
-    if (/^\d*$/.test(value)) {
-      setThresholdInput(value);
-    }
-  };
+  const commitThreshold = useCallback(() => {
+    commitNumberInput(thresholdInput, sortThreshold, onSortThresholdChange, setThresholdInput);
+    commitNumberInput(
+      deepThresholdInput,
+      deepSortThreshold,
+      onDeepSortThresholdChange,
+      setDeepThresholdInput,
+    );
+  }, [
+    commitNumberInput,
+    deepSortThreshold,
+    deepThresholdInput,
+    onDeepSortThresholdChange,
+    onSortThresholdChange,
+    sortThreshold,
+    thresholdInput,
+  ]);
+
+  const digitsOnly =
+    (set: (value: string) => void) =>
+    (event: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = event.target.value;
+      if (/^\d*$/.test(value)) {
+        set(value);
+      }
+    };
 
   const { errorKey: watchRootErrorKey } = getWatchRootValidation(watchRootInput);
   const watchRootErrorMessage = watchRootErrorKey ? t(watchRootErrorKey) : null;
@@ -157,6 +191,7 @@ export function PreferencesOverlay({
 
   const handleReset = (): void => {
     setThresholdInput(defaultSortThreshold.toString());
+    setDeepThresholdInput(defaultDeepSortThreshold.toString());
     setWatchRootInput(defaultWatchRoot);
     setIgnorePathsInput(defaultIgnorePaths.join('\n'));
     setIncludePathsInput(defaultIncludePaths.join('\n'));
@@ -267,8 +302,28 @@ export function PreferencesOverlay({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={thresholdInput}
-                onChange={handleThresholdChange}
+                onChange={digitsOnly(setThresholdInput)}
                 aria-label={t('preferences.sortingLimit.label')}
+              />
+            </div>
+          </div>
+          <div className="preferences-row">
+            <div className="preferences-row__details">
+              <p className="preferences-label">{t('preferences.deepSortingLimit.label')}</p>
+              <p className="preferences-hint">{t('preferences.deepSortingLimit.hint')}</p>
+            </div>
+            <div className="preferences-control">
+              <input
+                className="preferences-field preferences-number-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={deepThresholdInput}
+                // Nothing to limit until the walk is on: without it, sorting by size is bounded by
+                // the index and needs no ceiling of its own.
+                disabled={!deepFolderSizesEnabled || !folderSizesEnabled || !sizeColumnVisible}
+                onChange={digitsOnly(setDeepThresholdInput)}
+                aria-label={t('preferences.deepSortingLimit.label')}
               />
             </div>
           </div>

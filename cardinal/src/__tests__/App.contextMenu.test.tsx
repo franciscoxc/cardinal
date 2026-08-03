@@ -172,16 +172,22 @@ vi.mock('../hooks/useRecentFSEvents', () => ({
 
 vi.mock('../hooks/useRemoteSort', () => ({
   DEFAULT_SORTABLE_RESULT_THRESHOLD: 20000,
+  DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD: 2000,
   useRemoteSort: () => ({
     sortState: null,
     displayedResults: [101, 202],
     displayedResultsVersion: 1,
     sortThreshold: 20000,
     setSortThreshold: vi.fn(),
+    deepSortThreshold: 2000,
+    setDeepSortThreshold: vi.fn(),
+    deepSortOwnsWalks: false,
     canSort: true,
     isSorting: false,
     sortDisabledTooltip: null,
     sortButtonsDisabled: false,
+    sizeSortDisabledTooltip: null,
+    refreshSort: vi.fn(),
     handleSortToggle: vi.fn(),
   }),
 }));

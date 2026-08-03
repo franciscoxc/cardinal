@@ -54,7 +54,8 @@
     "sizeIncomplete": "Cota inferior: parte de esta carpeta no se puede leer o está excluida del índice."
   },
   "sorting": {
-    "disabled": "La ordenación está deshabilitada. Demasiados resultados ({{limit}}+) pueden afectar el rendimiento. Puede ajustar el umbral en Preferencias."
+    "disabled": "La ordenación está deshabilitada. Demasiados resultados ({{limit}}+) pueden afectar el rendimiento. Puede ajustar el umbral en Preferencias.",
+    "disabledFolderSizes": "No se puede ordenar por tamaño: completar los totales implica recorrer en disco cada resultado. Disponible hasta {{limit}} resultados, ajustable en Preferencias."
   },
   "events": {
     "columns": {
@@ -160,6 +161,10 @@
     },
     "sortingLimit": {
       "label": "Límite de ordenación"
+    },
+    "deepSortingLimit": {
+      "label": "Límite de ordenación con recorrido de carpetas",
+      "hint": "Ordenar por tamaño espera a que se recorra cada carpeta del resultado, así que tiene su propio límite, más bajo."
     },
     "save": "Guardar",
     "reset": "Restablecer valores predeterminados",

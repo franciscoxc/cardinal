@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.5 — 2026-08-03
+- Fix sorting by size, which ignored folder totals entirely. It ordered folders by the size of the directory inode — a few hundred bytes, near enough identical for every folder — so they all tied and fell back to name order while the column showed something else. Sorting now uses the total the column is showing.
+- Sum many folders at once without walking anything twice. A result set routinely holds a folder together with its own ancestors, and each ancestor used to re-add everything its descendants had just added up; the cost grew with the nesting depth rather than with the number of files.
+- Re-order live as the folder walk reports, so the list keeps matching the numbers it is showing. It holds off while a row is selected — re-ordering under a selection would either clear it several times a second or leave it pointing at a different file — and resumes as soon as the selection goes.
+- Add a second sorting limit, for sorting by size while the folder walk is on. That ordering has to finish walking every result on disk, which nothing else waits for, so it gets its own lower ceiling (2,000) instead of borrowing the general one. Above it the Size header greys out on its own and the other columns keep sorting. The field sits in Preferences, unavailable until the walk is turned on.
+- Fix walk requests being dropped past the 64th when an ordering asks for every folder in the result set. A dropped request was a folder that never grew past its indexed total.
+
 ## 0.3.4 — 2026-08-02
 - Show how much a folder holds in the Size column, which until now was empty for folders. The total is summed from the index in memory rather than by walking the disk, and only for the rows on screen. Off by default: the app behaves exactly as before until you turn it on in Preferences.
 - Mark a folder total with `+` when it is a lower bound, because part of the folder is unreadable or kept out of the index by the watch configuration. Hovering explains which.

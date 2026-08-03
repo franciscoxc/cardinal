@@ -14,7 +14,12 @@ import { useContextMenu } from './hooks/useContextMenu';
 import { useFileSearch } from './hooks/useFileSearch';
 import { useEventColumnWidths } from './hooks/useEventColumnWidths';
 import { useRecentFSEvents } from './hooks/useRecentFSEvents';
-import { DEFAULT_SORTABLE_RESULT_THRESHOLD, useRemoteSort } from './hooks/useRemoteSort';
+import {
+  DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD,
+  DEFAULT_SORTABLE_RESULT_THRESHOLD,
+  useRemoteSort,
+} from './hooks/useRemoteSort';
+import { subscribeFolderSizeUpdate } from './runtime/tauriEventRuntime';
 import { useSelection } from './hooks/useSelection';
 import { useQuickLook } from './hooks/useQuickLook';
 import { ROW_HEIGHT, OVERSCAN_ROW_COUNT } from './constants';
@@ -72,6 +77,62 @@ function App() {
   const { caseSensitive, directoryQuery, directoryScopeOpen } = searchParams;
   const { eventColWidths, onEventResizeStart, autoFitEventColumns } = useEventColumnWidths();
   const { t, i18n } = useTranslation();
+
+  const searchHasContentTerms = contentTerms.length > 0;
+  // The grid template is built here rather than in CSS because the user owns the column order.
+  const visibleColumns = useMemo(
+    () =>
+      columnOrder.filter(
+        (column) =>
+          (column !== CONTEXT_COLUMN || searchHasContentTerms) && !hiddenColumns.includes(column),
+      ),
+    [columnOrder, hiddenColumns, searchHasContentTerms],
+  );
+  // Hiding the Size column is what stops the sums: there is nowhere to show them, so there is no
+  // reason to walk a subtree per visible row.
+  // Both conditions, and neither is redundant: the preference is the user's intent, the column is
+  // whether there is anywhere to put the answer.
+  const sizeColumnVisible = visibleColumns.includes('size');
+
+  const {
+    status: fullDiskAccessStatus,
+    isChecking: isCheckingFullDiskAccess,
+    requestPermission: requestFullDiskAccessPermission,
+  } = useFullDiskAccessPermission();
+
+  const refreshSearchResults = useCallback(() => {
+    queueSearch(currentQuery, { immediate: true });
+  }, [currentQuery, queueSearch]);
+
+  const {
+    isPreferencesOpen,
+    closePreferences,
+    trayIconEnabled,
+    setTrayIconEnabled,
+    watchRoot,
+    defaultWatchRoot,
+    ignorePaths,
+    defaultIgnorePaths,
+    includePaths,
+    defaultIncludePaths,
+    folderSizesEnabled,
+    setFolderSizesEnabled,
+    deepFolderSizesEnabled,
+    setDeepFolderSizesEnabled,
+    preferencesResetToken,
+    handleWatchConfigChange,
+    handleResetPreferences,
+  } = useAppPreferences({
+    fullDiskAccessStatus,
+    isCheckingFullDiskAccess,
+    refreshSearchResults,
+    i18n,
+  });
+
+  const wantFolderSizes = folderSizesEnabled && sizeColumnVisible;
+  // The walk only makes sense on top of the sums it completes.
+  const wantDeepFolderSizes = wantFolderSizes && deepFolderSizesEnabled;
+
   // `resultsVersion` tracks raw backend search result-set changes.
   // `displayedResultsVersion` additionally tracks UI ordering/projection changes (e.g. sort toggle).
   const {
@@ -80,12 +141,23 @@ function App() {
     displayedResultsVersion,
     sortThreshold,
     setSortThreshold,
+    deepSortThreshold,
+    setDeepSortThreshold,
+    deepSortOwnsWalks,
     sortDisabledTooltip,
     sortButtonsDisabled,
+    sizeSortDisabledTooltip,
+    refreshSort,
     handleSortToggle,
-  } = useRemoteSort(results, resultsVersion, i18n.language, (limit) =>
-    t('sorting.disabled', { limit }),
-  );
+  } = useRemoteSort({
+    results,
+    resultsVersion,
+    locale: i18n.language,
+    folderSizes: wantFolderSizes,
+    deepFolderSizes: wantDeepFolderSizes,
+    formatDisabledTooltip: (limit) => t('sorting.disabled', { limit }),
+    formatSizeDisabledTooltip: (limit) => t('sorting.disabledFolderSizes', { limit }),
+  });
 
   // Centralized selection management for the virtualized files list.
   // Provides memoized helpers for click/keyboard selection and keeps Quick Look hooks fed.
@@ -99,6 +171,24 @@ function App() {
     clearSelection,
     moveSelection,
   } = useSelection(displayedResults, displayedResultsVersion, virtualListRef);
+
+  // Re-order as the walk reports, so the list matches the numbers it is showing.
+  //
+  // ponytail: no debounce. The events are already throttled twice before they get here — each walk
+  // reports every 250ms and the emitter batches for another 120ms — and re-ordering only reads
+  // totals the backend already has. Add one if a result set near the limit ever feels busy.
+  //
+  // ponytail-keep: not while something is selected. Selection is by row index, so re-ordering under
+  // it either clears the user's selection several times a second or leaves it pointing at a
+  // different file. Nothing is selected while you sit watching the totals fill in, and the next
+  // event re-orders as soon as the selection goes away.
+  const hasSelection = selectedIndices.length > 0;
+  useEffect(() => {
+    if (!deepSortOwnsWalks || hasSelection) {
+      return;
+    }
+    return subscribeFolderSizeUpdate(() => refreshSort());
+  }, [deepSortOwnsWalks, hasSelection, refreshSort]);
 
   const navigateFromSearchToResults = useCallback(() => {
     if (displayedResults.length === 0) {
@@ -161,12 +251,6 @@ function App() {
     showHeaderContextMenu: showEventsHeaderContextMenu,
   } = useContextMenu(autoFitEventColumns);
 
-  const {
-    status: fullDiskAccessStatus,
-    isChecking: isCheckingFullDiskAccess,
-    requestPermission: requestFullDiskAccessPermission,
-  } = useFullDiskAccessPermission();
-
   const focusSearchInput = useCallback(() => {
     requestAnimationFrame(() => {
       const input = searchInputRef.current;
@@ -187,35 +271,6 @@ function App() {
   useEffect(() => {
     focusAndSelectSearchInput();
   }, [focusAndSelectSearchInput]);
-
-  const refreshSearchResults = useCallback(() => {
-    queueSearch(currentQuery, { immediate: true });
-  }, [currentQuery, queueSearch]);
-
-  const {
-    isPreferencesOpen,
-    closePreferences,
-    trayIconEnabled,
-    setTrayIconEnabled,
-    watchRoot,
-    defaultWatchRoot,
-    ignorePaths,
-    defaultIgnorePaths,
-    includePaths,
-    defaultIncludePaths,
-    folderSizesEnabled,
-    setFolderSizesEnabled,
-    deepFolderSizesEnabled,
-    setDeepFolderSizesEnabled,
-    preferencesResetToken,
-    handleWatchConfigChange,
-    handleResetPreferences,
-  } = useAppPreferences({
-    fullDiskAccessStatus,
-    isCheckingFullDiskAccess,
-    refreshSearchResults,
-    i18n,
-  });
 
   useAppWindowListeners({
     activeTab,
@@ -274,19 +329,9 @@ function App() {
   }, []);
 
   const selectedIndexSet = useMemo(() => new Set(selectedIndices), [selectedIndices]);
-  const searchHasContentTerms = contentTerms.length > 0;
   const fileRowsWidth = searchHasContentTerms
     ? 'var(--columns-total-with-context)'
     : 'var(--columns-total)';
-  // The grid template is built here rather than in CSS because the user owns the column order.
-  const visibleColumns = useMemo(
-    () =>
-      columnOrder.filter(
-        (column) =>
-          (column !== CONTEXT_COLUMN || searchHasContentTerms) && !hiddenColumns.includes(column),
-      ),
-    [columnOrder, hiddenColumns, searchHasContentTerms],
-  );
 
   // Hiding the snippet column must stop the work behind it, not just the rendering: the terms are
   // what make `get_nodes_info` read every visible file to cut a snippet out of it.
@@ -295,14 +340,6 @@ function App() {
     () => (showContentContext ? contentTerms : []),
     [contentTerms, showContentContext],
   );
-  // Hiding the Size column is what stops the sums: there is nowhere to show them, so there is no
-  // reason to walk a subtree per visible row.
-  // Both conditions, and neither is redundant: the preference is the user's intent, the column is
-  // whether there is anywhere to put the answer.
-  const sizeColumnVisible = visibleColumns.includes('size');
-  const wantFolderSizes = folderSizesEnabled && sizeColumnVisible;
-  // The walk only makes sense on top of the sums it completes.
-  const wantDeepFolderSizes = wantFolderSizes && deepFolderSizesEnabled;
   const columnsTemplate = useMemo(
     () => visibleColumns.map((column) => `var(--w-${column})`).join(' '),
     [visibleColumns],
@@ -499,11 +536,15 @@ function App() {
               onSortToggle={handleSortToggle}
               sortDisabled={sortButtonsDisabled}
               sortDisabledTooltip={sortDisabledTooltip}
+              sizeSortDisabledTooltip={sizeSortDisabledTooltip}
               showContentContext={showContentContext}
               contentTerms={snippetTerms}
               caseInsensitive={!caseSensitive}
               folderSizes={wantFolderSizes}
-              deepFolderSizes={wantDeepFolderSizes}
+              // ponytail-keep: the sort already queued a walk for every result, under one
+              // generation. Letting the viewport queue its own would open a newer generation and
+              // cancel them, so scrolling would restart the totals the ordering is waiting for.
+              deepFolderSizes={wantDeepFolderSizes && !deepSortOwnsWalks}
               columnOrder={visibleColumns}
               onColumnMove={moveColumn}
               columnsTemplate={columnsTemplate}
@@ -528,6 +569,9 @@ function App() {
         sortThreshold={sortThreshold}
         defaultSortThreshold={DEFAULT_SORTABLE_RESULT_THRESHOLD}
         onSortThresholdChange={setSortThreshold}
+        deepSortThreshold={deepSortThreshold}
+        defaultDeepSortThreshold={DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD}
+        onDeepSortThresholdChange={setDeepSortThreshold}
         folderSizesEnabled={folderSizesEnabled}
         onFolderSizesEnabledChange={setFolderSizesEnabled}
         deepFolderSizesEnabled={deepFolderSizesEnabled}

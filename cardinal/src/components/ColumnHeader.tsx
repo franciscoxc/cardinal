@@ -28,6 +28,8 @@ type ColumnHeaderProps = {
   onSortToggle: (sortKey: SortKey) => void;
   sortDisabled: boolean;
   sortDisabledTooltip: string | null;
+  /** Set when only the Size column cannot be sorted, because the disk walk has its own limit. */
+  sizeSortDisabledTooltip: string | null;
   showContentContext: boolean;
   columnOrder: readonly OrderedColumn[];
   onColumnMove: (dragged: OrderedColumn, target: OrderedColumn) => void;
@@ -44,6 +46,7 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
       onSortToggle,
       sortDisabled,
       sortDisabledTooltip,
+      sizeSortDisabledTooltip,
       showContentContext,
       columnOrder,
       onColumnMove,
@@ -88,6 +91,10 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
             const sortKey = sortableColumns[column];
             const isActive = sortState?.key === sortKey;
             const indicatorClasses = ['sort-indicator'];
+            // Size can be the only column that cannot be sorted: ordering by it has to finish
+            // walking every folder first, which the other columns never wait for.
+            const columnSortDisabled =
+              sortDisabled || (column === 'size' && sizeSortDisabledTooltip !== null);
 
             if (isActive && sortState) {
               indicatorClasses.push(
@@ -97,13 +104,17 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
               indicatorClasses.push('sort-indicator--neutral');
             }
 
-            if (sortDisabled) {
+            if (columnSortDisabled) {
               indicatorClasses.push('sort-indicator--disabled');
             } else if (isActive) {
               indicatorClasses.push('sort-indicator--active');
             }
 
-            const title = sortDisabled ? sortDisabledTooltip || undefined : undefined;
+            const title = sortDisabled
+              ? sortDisabledTooltip || undefined
+              : columnSortDisabled
+                ? sizeSortDisabledTooltip || undefined
+                : undefined;
 
             return (
               <span
@@ -114,9 +125,9 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
               >
                 <button
                   type="button"
-                  className={`sort-button${sortDisabled ? ' sort-button--disabled' : ''}`}
+                  className={`sort-button${columnSortDisabled ? ' sort-button--disabled' : ''}`}
                   onClick={() => {
-                    if (consumeClickAfterDrag() || sortDisabled) {
+                    if (consumeClickAfterDrag() || columnSortDisabled) {
                       return;
                     }
                     onSortToggle(sortKey);
@@ -125,8 +136,8 @@ export const ColumnHeader = forwardRef<HTMLDivElement, ColumnHeaderProps>(
                   // swallows mouse events instead of bubbling them, so above the sort limit
                   // (20k results) the press never reached the cell and columns could not be
                   // dragged either — sorting and reordering have nothing to do with each other.
-                  aria-disabled={sortDisabled}
-                  aria-pressed={isActive && !sortDisabled}
+                  aria-disabled={columnSortDisabled}
+                  aria-pressed={isActive && !columnSortDisabled}
                   title={title}
                 >
                   <span className="sort-button__label">{label}</span>
