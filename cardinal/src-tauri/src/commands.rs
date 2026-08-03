@@ -298,7 +298,10 @@ pub async fn search(
     search_activity::note_search_activity();
 
     let options = options.unwrap_or_default();
-    let content_terms = query.as_deref().map(content_terms_of_query).unwrap_or_default();
+    let content_terms = query
+        .as_deref()
+        .map(content_terms_of_query)
+        .unwrap_or_default();
     let cancellation_token = CancellationToken::new_search();
     let (result_tx, result_rx) = bounded(1);
     if let Err(e) = state.search_tx.send(SearchJob {
