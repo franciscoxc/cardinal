@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.6 — 2026-08-28
 - Search for every word the "Contains" field is given, instead of the exact phrase. Two words there used to mean "these words, adjacent" — the opposite of what the main bar does with the same input, ten pixels away — so typing two words found almost nothing and nothing said why. Quotes still mean the phrase, and the field's tooltip says so.
 - Find Outlook mail with `type:email`. Legacy Outlook for Mac keeps every message as its own file (`.olk15Message` for the header, `.olk15MsgSource` for the full source, `.olk15MsgAttach` per attachment, and the `.olk14` generation before it), none of which were recognised. Whole mailboxes are covered too: `.olm`, `.pst`, `.ost`, `.nst` and `.oft`. `type:outlook` is an alias. The current Outlook for Mac keeps its live mail in a database rather than in files, so only its `.olm` archives can be found.
 - Fix sorting by size freezing the app while it added up folders. The sums run on the loop that also answers searches and could not be interrupted, so ordering a large result set held everything for as long as the walk took — and the answer was already worthless, because the next keystroke had replaced the results. A new search now abandons them.
