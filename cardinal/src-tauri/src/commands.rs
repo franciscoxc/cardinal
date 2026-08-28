@@ -178,8 +178,13 @@ impl SearchState {
             return (Vec::new(), Vec::new());
         }
 
-        let mut cache_guard = self.sorted_view_cache.lock();
-        if let Some(cached) = cache_guard
+        // ponytail-keep: the lock is taken twice on purpose, and never held across the request
+        // below. That request blocks until the background loop answers, and summing folders for an
+        // ordering can keep that loop busy — so holding the lock across it made every other caller
+        // queue behind a mutex as well as behind the loop, for work that was already redundant.
+        if let Some(cached) = self
+            .sorted_view_cache
+            .lock()
             .as_ref()
             .filter(|cache| cache.slab_indices == slab_indices)
             // Totals are what re-sorting during a walk reuses; without this an entry cached by an
@@ -192,7 +197,7 @@ impl SearchState {
 
         let response =
             self.request_node_info(slab_indices.to_vec(), folder_sizes, deep_folder_sizes);
-        *cache_guard = Some(SortedViewCache {
+        *self.sorted_view_cache.lock() = Some(SortedViewCache {
             slab_indices: slab_indices.to_vec(),
             nodes: response.nodes.clone(),
             folder_sizes: response.folder_sizes.clone(),

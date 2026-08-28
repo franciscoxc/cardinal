@@ -39,6 +39,19 @@ impl CancellationToken {
         }
     }
 
+    /// A token for work that belongs to the search already running, without starting a new one.
+    ///
+    /// Summing folders for an ordering happens on the same loop that answers searches, and is only
+    /// worth anything for the result set that asked for it. Bound to the current generation, the
+    /// next keystroke abandons it instead of making the user wait for an answer about results that
+    /// are already gone.
+    pub fn current_search() -> Self {
+        Self {
+            version: self::ACTIVE_SEARCH_VERSION.load(Ordering::SeqCst),
+            active_version: &ACTIVE_SEARCH_VERSION,
+        }
+    }
+
     pub fn new_scan() -> Self {
         let version = self::ACTIVE_SCAN_VERSION.fetch_add(1, Ordering::SeqCst) + 1;
         Self {

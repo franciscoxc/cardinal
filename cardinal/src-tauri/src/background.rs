@@ -268,7 +268,12 @@ fn compute_folder_sizes(
     nodes: &[SearchResultNode],
     walk: Option<(CancellationToken, &Sender<WalkRequest>)>,
 ) -> Vec<Option<FolderSize>> {
-    let token = CancellationToken::noop();
+    // ponytail-keep: bound to the running search, not noop. Ordering by size asks for every result
+    // at once, so this walks the union of their subtrees on the loop that also answers searches —
+    // and with a noop token nothing could stop it. A result set of folders near the sort limit made
+    // the app unresponsive for as long as the walk took, with the answer already worthless because
+    // the user had typed on.
+    let token = CancellationToken::current_search();
     // One memo for the whole batch: sorting asks for every result at once, and a result set holds
     // nested folders often enough that re-walking each ancestor's descendants is the difference
     // between one traversal and one per level.
