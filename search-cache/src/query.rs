@@ -1232,7 +1232,7 @@ fn lookup_type_group(name: &str) -> Option<TypeFilterTarget> {
             Some(TypeFilterTarget::Extensions(SPREADSHEET_EXTENSIONS))
         }
         "pdf" => Some(TypeFilterTarget::Extensions(PDF_EXTENSIONS)),
-        "email" | "emails" | "mail" | "mails" | "message" | "messages" => {
+        "email" | "emails" | "mail" | "mails" | "message" | "messages" | "outlook" => {
             Some(TypeFilterTarget::Extensions(EMAIL_EXTENSIONS))
         }
         "archive" | "archives" | "compressed" | "zip" => {
@@ -1265,7 +1265,35 @@ const SPREADSHEET_EXTENSIONS: &[&str] = &["xls", "xlsx", "csv", "numbers", "ods"
 const PDF_EXTENSIONS: &[&str] = &["pdf"];
 // `emlx`/`emlxpart` are Apple Mail's on-disk format, the one nobody finds by name; `msg` is
 // Outlook, `mbox` a whole mailbox exported as one file.
-const EMAIL_EXTENSIONS: &[&str] = &["eml", "emlx", "emlxpart", "msg", "mbox"];
+const EMAIL_EXTENSIONS: &[&str] = &[
+    // Apple Mail, and the formats everything else exchanges messages in.
+    "eml",
+    "emlx",
+    "emlxpart",
+    "msg",
+    "mbox",
+    // Whole mailboxes. `olm` is what both the legacy and the current Outlook for Mac export to —
+    // and for the current one it is the only file there is, since its live mail lives in a SQLite
+    // database with no file per message. The rest arrive from Windows Outlook.
+    "olm",
+    "pst",
+    "ost",
+    "nst",
+    "oft",
+    // ponytail-keep: lowercase, though Outlook writes these capitalised as `.olk15Message`.
+    // `extension_of` lowercases before comparing, so a capitalised entry here matches nothing —
+    // and it fails silently, looking exactly like "Outlook is not supported".
+    //
+    // Legacy Outlook for Mac keeps one file per item, and one message becomes several of them: the
+    // header, the full source, and one per attachment. The source file is the complete one — it
+    // holds sender, subject and body — so it is the one worth a `content:` search.
+    "olk15message",
+    "olk15msgsource",
+    "olk15msgattach",
+    "olk14message",
+    "olk14msgsource",
+    "olk14msgattach",
+];
 const ARCHIVE_EXTENSIONS: &[&str] = &[
     "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "zst", "cab", "iso", "dmg",
 ];

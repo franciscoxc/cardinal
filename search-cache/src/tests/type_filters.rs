@@ -320,6 +320,34 @@ fn test_type_email_and_aliases() {
 }
 
 #[test]
+fn test_type_email_finds_outlook_files() {
+    let tmp = TempDir::new("type_email_outlook").unwrap();
+    // Written the way Outlook writes them, capitals and all: the filter lowercases before
+    // comparing, so a capitalised entry in the extension list would match nothing and look
+    // exactly like "Outlook is not supported".
+    fs::write(tmp.path().join("0000001.olk15Message"), b"x").unwrap();
+    fs::write(tmp.path().join("0000001.olk15MsgSource"), b"x").unwrap();
+    fs::write(tmp.path().join("0000001.olk15MsgAttach"), b"x").unwrap();
+    fs::write(tmp.path().join("legacy.olk14Message"), b"x").unwrap();
+    fs::write(tmp.path().join("legacy.olk14MsgSource"), b"x").unwrap();
+    fs::write(tmp.path().join("legacy.olk14MsgAttach"), b"x").unwrap();
+    fs::write(tmp.path().join("archive.olm"), b"x").unwrap();
+    fs::write(tmp.path().join("windows.pst"), b"x").unwrap();
+    fs::write(tmp.path().join("offline.ost"), b"x").unwrap();
+    fs::write(tmp.path().join("groups.nst"), b"x").unwrap();
+    fs::write(tmp.path().join("template.oft"), b"x").unwrap();
+    // Same profile, not email: contacts and calendar keep their own files and stay out.
+    fs::write(tmp.path().join("someone.olk15Contact"), b"x").unwrap();
+    fs::write(tmp.path().join("meeting.olk15Event"), b"x").unwrap();
+    fs::write(tmp.path().join("notes.txt"), b"x").unwrap();
+
+    let mut cache = SearchCache::walk_fs(tmp.path());
+
+    assert_eq!(cache.search("type:email").unwrap().len(), 11);
+    assert_eq!(cache.search("type:outlook").unwrap().len(), 11);
+}
+
+#[test]
 fn test_type_archive_comprehensive() {
     let tmp = TempDir::new("type_archive").unwrap();
     fs::write(tmp.path().join("archive.zip"), b"x").unwrap();
