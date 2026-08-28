@@ -111,34 +111,56 @@ export const setFileType = (query: string, value: FileTypeValue | ''): string =>
 // Always quoted, so a phrase with spaces round-trips and the reader below has one shape to match.
 const CONTENT_TOKEN = /(^|\s)content:"((?:[^"\\]|\\.)*)"(?=\s|$)/gi;
 
+const unescape = (value: string) => value.replace(/\\(.)/g, '$1');
+
 /**
- * The text the "contains" field should display: the searched phrase, `''` when the query has no
- * content filter, or CUSTOM when it has one this field cannot represent (negated, grouped, or more
- * than one).
+ * Splits what the user typed into the words to search for, honouring quotes.
+ *
+ * ponytail-keep: the whole field used to become one `content:"…"`, which made two words an exact
+ * phrase — the opposite of what the main bar does with the same input, ten pixels away. Typing
+ * "informe mensual" there found only files with the words adjacent, and nothing explained why.
+ * Loose words mean all of them; quotes mean the phrase. Same rule as the bar, same rule as every
+ * other search box.
+ */
+export const splitContentWords = (term: string): string[] =>
+  [...term.matchAll(/"((?:[^"\\]|\\.)*)"|(\S+)/g)]
+    .map((match) => (match[1] !== undefined ? unescape(match[1]) : match[2]))
+    .filter((word) => word.length > 0);
+
+/**
+ * The text the "contains" field should display: the words it is searching for, `''` when the query
+ * has no content filter, or CUSTOM when it has one this field cannot represent (negated or
+ * grouped). Several `content:` filters read back as several words, which is what wrote them.
  */
 export const readContentTerm = (query: string): string | typeof CUSTOM => {
   if (!MENTIONS_CONTENT.test(query)) {
     return '';
   }
   const matches = [...query.matchAll(CONTENT_TOKEN)];
-  if (matches.length !== 1) {
+  if (matches.length === 0) {
     return CUSTOM;
   }
   const rest = query.replace(CONTENT_TOKEN, '$1');
   if (MENTIONS_CONTENT.test(rest)) {
     return CUSTOM;
   }
-  return matches[0][2].replace(/\\(.)/g, '$1');
+  // A word that had to be quoted going in has to come back quoted, or the next keystroke in the
+  // field would silently reinterpret a phrase as separate words.
+  return matches
+    .map((match) => unescape(match[2]))
+    .map((word) => (/\s/.test(word) ? `"${word.replace(/(["\\])/g, '\\$1')}"` : word))
+    .join(' ');
 };
 
-/** Query with its content filter set to `term`, or removed when `term` is empty. */
+/** Query with its content filters set to `term`: one filter per word, so all of them must match. */
 export const setContentTerm = (query: string, term: string): string => {
   const base = collapse(query.replace(CONTENT_TOKEN, '$1'));
-  const trimmed = term.trim();
-  if (!trimmed) {
+  const words = splitContentWords(term);
+  if (words.length === 0) {
     return base;
   }
-  const escaped = trimmed.replace(/(["\\])/g, '\\$1');
-  const token = `content:"${escaped}"`;
-  return base ? `${base} ${token}` : token;
+  const tokens = words
+    .map((word) => `content:"${word.replace(/(["\\])/g, '\\$1')}"`)
+    .join(' ');
+  return base ? `${base} ${tokens}` : tokens;
 };

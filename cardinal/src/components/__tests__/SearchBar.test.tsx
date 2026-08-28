@@ -93,13 +93,13 @@ describe('SearchBar', () => {
     expect(onDirectoryValueChange).not.toHaveBeenCalled();
   });
 
-  it('writes what the contains field types into the query as a quoted content filter', () => {
+  it('writes each word the contains field types as its own content filter', () => {
     const onQueryValueChange = vi.fn();
     renderSearchBar({ value: 'informe', onQueryValueChange });
 
     const contains = screen.getByPlaceholderText('search.content.hint');
     fireEvent.change(contains, { target: { value: 'Bearer token' } });
-    expect(onQueryValueChange).toHaveBeenCalledWith('informe content:"Bearer token"');
+    expect(onQueryValueChange).toHaveBeenCalledWith('informe content:"Bearer" content:"token"');
   });
 
   it('routes directory input focus state through the shared search focus handlers', () => {

@@ -33,6 +33,7 @@
     "content": {
       "label": "Contiene",
       "hint": "(cerca dentro)",
+      "help": "Più parole: devono comparire tutte. Tra \"virgolette\": la frase esatta.",
       "custom": "impostato nella barra di ricerca"
     },
     "clear": "Cancella"

@@ -33,6 +33,7 @@
     "content": {
       "label": "İçerir",
       "hint": "(içinde ara)",
+      "help": "Birden çok kelime: hepsi geçmeli. \"Tırnak\" içinde: tam ifade.",
       "custom": "arama çubuğunda ayarlandı"
     },
     "clear": "Temizle"

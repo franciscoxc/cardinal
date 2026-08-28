@@ -33,6 +33,7 @@
     "content": {
       "label": "Contains",
       "hint": "(search inside)",
+      "help": "Several words: all of them must appear. Between \"quotes\": the exact phrase.",
       "custom": "set in the search bar"
     },
     "clear": "Clear"

@@ -33,6 +33,7 @@
     "content": {
       "label": "Contient",
       "hint": "(chercher dedans)",
+      "help": "Plusieurs mots : tous doivent apparaître. Entre « guillemets » : la phrase exacte.",
       "custom": "défini dans la barre de recherche"
     },
     "clear": "Effacer"

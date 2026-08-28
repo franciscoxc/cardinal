@@ -296,7 +296,7 @@ export function SearchBar({
             onKeyDown={onKeyDown}
             placeholder={contentIsCustom ? t('search.content.custom') : t('search.content.hint')}
             disabled={contentIsCustom}
-            title={contentIsCustom ? t('search.content.custom') : undefined}
+            title={contentIsCustom ? t('search.content.custom') : t('search.content.help')}
             spellCheck={false}
             autoCorrect="off"
             autoComplete="off"

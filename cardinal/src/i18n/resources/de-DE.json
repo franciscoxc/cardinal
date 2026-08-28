@@ -33,6 +33,7 @@
     "content": {
       "label": "Enthält",
       "hint": "(darin suchen)",
+      "help": "Mehrere Wörter: alle müssen vorkommen. In \"Anführungszeichen\": die genaue Wortfolge.",
       "custom": "in der Suchleiste festgelegt"
     },
     "clear": "Löschen"

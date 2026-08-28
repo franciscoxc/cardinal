@@ -33,6 +33,7 @@
     "content": {
       "label": "Contém",
       "hint": "(buscar dentro)",
+      "help": "Várias palavras: todas precisam aparecer. Entre \"aspas\": a frase exata.",
       "custom": "definido na barra de busca"
     },
     "clear": "Limpar"

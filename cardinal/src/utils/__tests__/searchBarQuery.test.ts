@@ -46,30 +46,50 @@ describe('file type', () => {
 });
 
 describe('contains', () => {
-  it('round-trips a phrase, spaces and all', () => {
+  it('searches for every word, so two words no longer mean an exact phrase', () => {
+    // The whole field used to become one quoted filter, which is the opposite of what the main bar
+    // does with the same two words.
     const query = setContentTerm('informe', 'Bearer token');
-    expect(query).toBe('informe content:"Bearer token"');
+    expect(query).toBe('informe content:"Bearer" content:"token"');
     expect(readContentTerm(query)).toBe('Bearer token');
   });
 
+  it('still takes a quoted phrase as one term', () => {
+    const query = setContentTerm('informe', '"Bearer token"');
+    expect(query).toBe('informe content:"Bearer token"');
+    // Comes back quoted: unquoted, the next keystroke would split it into two words.
+    expect(readContentTerm(query)).toBe('"Bearer token"');
+  });
+
+  it('mixes a phrase with loose words', () => {
+    expect(setContentTerm('', '"hola mundo" firma')).toBe(
+      'content:"hola mundo" content:"firma"',
+    );
+  });
+
   it('keeps a trailing space, which the engine searches for', () => {
-    expect(readContentTerm('content:"Bearer "')).toBe('Bearer ');
+    expect(readContentTerm('content:"Bearer "')).toBe('"Bearer "');
   });
 
   it('escapes quotes so the token cannot be broken out of', () => {
-    const query = setContentTerm('', 'say "hi"');
+    const query = setContentTerm('', '"say \\"hi\\""');
     expect(query).toBe('content:"say \\"hi\\""');
-    expect(readContentTerm(query)).toBe('say "hi"');
+    expect(readContentTerm(query)).toBe('"say \\"hi\\""');
   });
 
   it('replaces rather than stacks, and clears on empty', () => {
     expect(setContentTerm('a content:"one" b', 'two')).toBe('a b content:"two"');
+    expect(setContentTerm('a content:"one" content:"two"', 'three')).toBe('a content:"three"');
     expect(setContentTerm('a content:"one"', '   ')).toBe('a');
+  });
+
+  it('reads several filters back as several words', () => {
+    expect(readContentTerm('content:"a" content:"b"')).toBe('a b');
   });
 
   it('reports custom for a content filter it did not write', () => {
     expect(readContentTerm('!content:"draft"')).toBe(CUSTOM);
-    expect(readContentTerm('content:"a" content:"b"')).toBe(CUSTOM);
+    expect(readContentTerm('content:bare')).toBe(CUSTOM);
     expect(readContentTerm('informe')).toBe('');
   });
 });
