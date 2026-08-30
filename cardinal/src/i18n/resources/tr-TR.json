@@ -239,6 +239,14 @@
       "title": "Denetlenemedi",
       "body": "Cardinal GitHub'a ulaşamadı. Bağlantınızı denetleyin veya sürümler sayfasını tarayıcıda açın.",
       "open": "Sayfayı aç"
+    },
+    "mounted": {
+      "title": "Güncelleme hazır",
+      "body": "Cardinal {{latest}} İndirilenler klasörüne indirildi ve açıldı. Mevcut sürümün yerine kurmak için Uygulamalar'a sürükleyin."
+    },
+    "downloadFailed": {
+      "title": "İndirilemedi",
+      "body": "Cardinal güncellemeyi indiremedi. Sürümler sayfasından alabilirsiniz."
     }
   }
 }

@@ -238,6 +238,14 @@
       "title": "无法检查更新",
       "body": "Cardinal 无法连接 GitHub。请检查网络，或在浏览器中打开版本页面。",
       "open": "打开页面"
+    },
+    "mounted": {
+      "title": "更新已就绪",
+      "body": "Cardinal {{latest}} 已下载到「下载」文件夹并打开。将它拖到「应用程序」即可安装，替换当前版本。"
+    },
+    "downloadFailed": {
+      "title": "下载失败",
+      "body": "无法下载更新。你可以从发布页面获取。"
     }
   }
 }

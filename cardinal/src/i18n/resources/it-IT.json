@@ -239,6 +239,14 @@
       "title": "Impossibile verificare",
       "body": "Cardinal non è riuscito a raggiungere GitHub. Controlla la connessione o apri la pagina delle versioni nel browser.",
       "open": "Apri pagina"
+    },
+    "mounted": {
+      "title": "Aggiornamento pronto",
+      "body": "Cardinal {{latest}} è stato scaricato nella cartella Download e aperto. Trascinalo su Applicazioni per installarlo, sostituendo la versione attuale."
+    },
+    "downloadFailed": {
+      "title": "Download non riuscito",
+      "body": "Cardinal non è riuscito a scaricare l'aggiornamento. Puoi prenderlo dalla pagina delle versioni."
     }
   }
 }

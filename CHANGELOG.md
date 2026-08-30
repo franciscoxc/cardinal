@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.9 — 2026-08-30
+- Show what is in a new release, and download it from the same dialog. "Check for Updates…" used to say only that a version existed and send you to a web page; it now lists what changed and, on one click, downloads the disk image to your Downloads folder and opens it, leaving the drag onto Applications to you. Deliberately not a silent auto-updater: nothing is replaced without you doing it, and the app still makes no network request unless you ask it to.
+
 ## 0.3.8 — 2026-08-30
 - Put "About Cardinal", "Check for Updates…" and "Settings" on the menu-bar icon. With the tray icon on, the app can be sitting there with no window and no Dock icon, and the menu bar is whatever app currently has focus — so there was no reliable way to reach those three, not even to read which version was running.
 - Fix the "Contains" field eating a space as you typed it. The field showed the query read back, and a trailing space cannot survive that trip: `informe ` becomes `content:"informe"` and returns as `informe`, so the space vanished the instant it was typed and the next letter joined the previous word. Entering two words meant typing one, waiting, then the space.

@@ -1,10 +1,64 @@
 import { getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
 import { ask, message } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import i18n from '../i18n/config';
 
 const LATEST_RELEASE_API = 'https://api.github.com/repos/franciscoxc/cardinal/releases/latest';
 export const RELEASES_PAGE = 'https://github.com/franciscoxc/cardinal/releases/latest';
+
+/** How much of the release notes the dialog will show before pointing at the full page. */
+const NOTES_BUDGET = 1200;
+
+/**
+ * Release notes as a plain dialog can show them.
+ *
+ * The dialog takes a string, not markup, so the markers have to go or they show up as literal
+ * asterisks and brackets. Links keep their text and lose the URL: nothing in a modal can be
+ * clicked anyway.
+ */
+export const plainNotes = (body: string): string => {
+  const text = body
+    .replace(/\r/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    // Spaces and tabs, not \s: that class includes the newline, so a bullet after a blank line
+    // swallowed the blank line and the notes came out as one wall of text.
+    .replace(/^[ \t]*[-*][ \t]+/gm, '• ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  if (text.length <= NOTES_BUDGET) {
+    return text;
+  }
+  // Cut at a line break rather than mid-sentence, so the tail never reads like a truncation bug.
+  const cut = text.lastIndexOf('\n', NOTES_BUDGET);
+  return `${text.slice(0, cut > 0 ? cut : NOTES_BUDGET).trim()}\n…`;
+};
+
+/** The macOS disk image among a release's assets, if it published one. */
+export const diskImageUrl = (release: unknown): string | null => {
+  if (typeof release !== 'object' || release === null || !('assets' in release)) {
+    return null;
+  }
+  const assets = (release as { assets: unknown }).assets;
+  if (!Array.isArray(assets)) {
+    return null;
+  }
+  for (const asset of assets) {
+    const url =
+      typeof asset === 'object' && asset !== null && 'browser_download_url' in asset
+        ? String((asset as { browser_download_url: unknown }).browser_download_url)
+        : '';
+    if (url.endsWith('.dmg')) {
+      return url;
+    }
+  }
+  return null;
+};
 
 /** Negative when `a` is older, positive when newer, zero when the same release. */
 export const compareVersions = (a: string, b: string): number => {
@@ -62,13 +116,44 @@ export async function checkForUpdates(): Promise<void> {
       return;
     }
 
-    const wantsDownload = await ask(t('updates.available.body', { latest, current }), {
+    const notes =
+      typeof release === 'object' && release !== null && 'body' in release
+        ? plainNotes(String((release as { body: unknown }).body ?? ''))
+        : '';
+    const dmg = diskImageUrl(release);
+
+    const headline = t('updates.available.body', { latest, current });
+    const wantsDownload = await ask(notes ? `${headline}\n\n${notes}` : headline, {
       title: t('updates.available.title'),
-      okLabel: t('updates.available.download'),
+      okLabel: dmg ? t('updates.available.download') : t('updates.failed.open'),
       cancelLabel: t('updates.available.later'),
     });
-    if (wantsDownload) {
+    if (!wantsDownload) {
+      return;
+    }
+
+    // No disk image in the release: fall back to the page, which is what this always did.
+    if (!dmg) {
       await openUrl(RELEASES_PAGE);
+      return;
+    }
+
+    try {
+      await invoke('download_and_mount_update', { url: dmg });
+      await message(t('updates.mounted.body', { latest }), {
+        title: t('updates.mounted.title'),
+      });
+    } catch (downloadError) {
+      console.error('Update download failed', downloadError);
+      // Downloading is a convenience; the page is the thing that always works.
+      const wantsPage = await ask(t('updates.downloadFailed.body'), {
+        title: t('updates.downloadFailed.title'),
+        okLabel: t('updates.failed.open'),
+        cancelLabel: t('updates.available.later'),
+      });
+      if (wantsPage) {
+        await openUrl(RELEASES_PAGE);
+      }
     }
   } catch (error) {
     console.error('Update check failed', error);

@@ -239,6 +239,14 @@
       "title": "Suche fehlgeschlagen",
       "body": "Cardinal konnte GitHub nicht erreichen. Prüfen Sie die Verbindung oder öffnen Sie die Versionsseite im Browser.",
       "open": "Seite öffnen"
+    },
+    "mounted": {
+      "title": "Update bereit",
+      "body": "Cardinal {{latest}} wurde in den Ordner \"Downloads\" geladen und geöffnet. Ziehen Sie es auf \"Programme\", um es zu installieren und die aktuelle Version zu ersetzen."
+    },
+    "downloadFailed": {
+      "title": "Download fehlgeschlagen",
+      "body": "Cardinal konnte das Update nicht laden. Sie können es stattdessen von der Releases-Seite holen."
     }
   }
 }

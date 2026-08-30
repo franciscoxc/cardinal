@@ -239,6 +239,14 @@
       "title": "Não foi possível verificar",
       "body": "O Cardinal não conseguiu acessar o GitHub. Verifique sua conexão ou abra a página de versões no navegador.",
       "open": "Abrir página"
+    },
+    "mounted": {
+      "title": "Atualização pronta",
+      "body": "O Cardinal {{latest}} foi baixado para a pasta Downloads e aberto. Arraste-o para Aplicativos para instalar, substituindo a versão atual."
+    },
+    "downloadFailed": {
+      "title": "Falha no download",
+      "body": "O Cardinal não conseguiu baixar a atualização. Você pode obtê-la na página de versões."
     }
   }
 }

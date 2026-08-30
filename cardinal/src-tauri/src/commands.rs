@@ -27,7 +27,7 @@ use search_cache::{
 use search_cancel::CancellationToken;
 use serde::{Deserialize, Serialize};
 use std::{cell::LazyCell, process::Command};
-use tauri::{ActivationPolicy, AppHandle, State};
+use tauri::{ActivationPolicy, AppHandle, Manager, State};
 use tracing::{error, info, warn};
 
 #[derive(Debug, Clone)]
@@ -583,6 +583,77 @@ pub async fn open_path(path: String) {
     if let Err(e) = Command::new("open").arg(&path).spawn() {
         error!("Failed to open path: {e}");
     }
+}
+
+/// Where a release asset is allowed to come from.
+///
+/// ponytail-keep: this prefix check is the whole security of the command below, which downloads a
+/// file and mounts it. Without it, anything able to reach the command — a crafted response, a
+/// future caller that forgets — could have the app mount an arbitrary disk image. The URL is only
+/// ever supposed to come from this repository's own release assets, so require exactly that.
+const RELEASE_ASSET_PREFIX: &str = "https://github.com/franciscoxc/cardinal/releases/download/";
+
+/// Downloads a release asset and mounts it, so updating is one click from the update dialog.
+///
+/// Deliberately not an auto-updater: no signature manifest, no update channel, no silent replace.
+/// It fetches the disk image the user just agreed to and opens it, leaving the drag to Applications
+/// — and the decision — to them.
+#[tauri::command(async)]
+pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<String, String> {
+    if !url.starts_with(RELEASE_ASSET_PREFIX) {
+        error!("Refused to download an asset from outside the release URL: {url}");
+        return Err("unexpected download location".into());
+    }
+
+    let name = url
+        .rsplit('/')
+        .next()
+        .filter(|name| name.ends_with(".dmg") && !name.contains(['/', '\\']))
+        .ok_or_else(|| "unexpected asset name".to_string())?
+        .to_string();
+
+    let target = app
+        .path()
+        .download_dir()
+        .map_err(|e| format!("no Downloads folder: {e}"))?
+        .join(&name);
+
+    // curl rather than an HTTP crate: macOS ships it, the app already shells out to `open`, and a
+    // whole client dependency tree to fetch one file is not worth carrying.
+    let status = Command::new("curl")
+        .args([
+            "--fail",
+            "--location",
+            "--silent",
+            "--show-error",
+            "--proto",
+            "=https",
+            "--tlsv1.2",
+            "--output",
+        ])
+        .arg(&target)
+        .arg(&url)
+        .status()
+        .map_err(|e| format!("could not run curl: {e}"))?;
+
+    if !status.success() {
+        return Err(format!("download failed ({status})"));
+    }
+
+    // No `-nobrowse`: opening the volume in Finder is the point — that is the window the app gets
+    // dragged from.
+    let mounted = Command::new("hdiutil")
+        .arg("attach")
+        .arg(&target)
+        .status()
+        .map_err(|e| format!("could not run hdiutil: {e}"))?;
+
+    if !mounted.success() {
+        return Err(format!("could not mount the disk image ({mounted})"));
+    }
+
+    info!("Update downloaded to {target:?} and mounted");
+    Ok(target.to_string_lossy().into_owned())
 }
 
 #[tauri::command]

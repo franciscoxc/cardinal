@@ -239,6 +239,14 @@
       "title": "No se pudo comprobar",
       "body": "Cardinal no pudo conectarse a GitHub. Revisá tu conexión, o abrí la página de versiones en el navegador.",
       "open": "Abrir página"
+    },
+    "mounted": {
+      "title": "Actualización lista",
+      "body": "Cardinal {{latest}} se descargó en tu carpeta de Descargas y se abrió. Arrastralo sobre Aplicaciones para instalarlo, reemplazando la versión actual."
+    },
+    "downloadFailed": {
+      "title": "No se pudo descargar",
+      "body": "Cardinal no pudo descargar la actualización. Podés bajarla desde la página de versiones."
     }
   }
 }

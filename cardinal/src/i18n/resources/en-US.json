@@ -239,6 +239,14 @@
       "title": "Could not check for updates",
       "body": "Cardinal could not reach GitHub. Check your connection, or open the releases page in your browser.",
       "open": "Open page"
+    },
+    "mounted": {
+      "title": "Update ready",
+      "body": "Cardinal {{latest}} was downloaded to your Downloads folder and opened. Drag it onto Applications to install it, replacing the current version."
+    },
+    "downloadFailed": {
+      "title": "Download failed",
+      "body": "Cardinal could not download the update. You can get it from the releases page instead."
     }
   }
 }

@@ -239,6 +239,14 @@
       "title": "Vérification impossible",
       "body": "Cardinal n'a pas pu joindre GitHub. Vérifiez votre connexion ou ouvrez la page des versions dans le navigateur.",
       "open": "Ouvrir la page"
+    },
+    "mounted": {
+      "title": "Mise à jour prête",
+      "body": "Cardinal {{latest}} a été téléchargé dans votre dossier Téléchargements et ouvert. Faites-le glisser sur Applications pour l'installer, en remplaçant la version actuelle."
+    },
+    "downloadFailed": {
+      "title": "Échec du téléchargement",
+      "body": "Cardinal n'a pas pu télécharger la mise à jour. Vous pouvez l'obtenir depuis la page des versions."
     }
   }
 }
