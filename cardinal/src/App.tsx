@@ -558,8 +558,10 @@ function App() {
           scannedFiles={scannedFiles}
           processedEvents={processedEvents}
           lifecycleState={lifecycleState}
-          searchDurationMs={durationMs}
-          resultCount={resultCount}
+          // Nothing was searched for, so there is no count and no time to report: "0 results in
+          // 0 ms" under an untouched field reads as a search that found nothing.
+          searchDurationMs={displayState === 'idle' ? null : durationMs}
+          resultCount={displayState === 'idle' ? null : resultCount}
           activeTab={activeTab}
           onTabChange={onTabChange}
           onRequestRescan={requestRescan}
