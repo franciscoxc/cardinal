@@ -14,7 +14,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = {}) => {
+const baseProps = (
+  overrides: Partial<ComponentProps<typeof SearchBar>> = {},
+): ComponentProps<typeof SearchBar> => {
   const props: ComponentProps<typeof SearchBar> = {
     inputRef: createRef<HTMLInputElement>(),
     placeholder: 'Search',
@@ -40,7 +42,11 @@ const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = 
     onBlur: vi.fn(),
     ...overrides,
   };
+  return props;
+};
 
+const renderSearchBar = (overrides: Partial<ComponentProps<typeof SearchBar>> = {}) => {
+  const props = baseProps(overrides);
   render(<SearchBar {...props} />);
   return props;
 };
@@ -251,6 +257,24 @@ describe('SearchBar', () => {
     // Ends on a space, and the caret goes there: picking a filter should not leave the user
     // wondering whether their term goes before or after what the control wrote.
     expect(onQueryValueChange).toHaveBeenCalledWith('informe type:image ');
+  });
+
+  it('keeps a space while it is being typed, so two words can be entered in one go', () => {
+    const onQueryValueChange = vi.fn();
+    const { rerender } = render(<SearchBar {...baseProps({ value: '', onQueryValueChange })} />);
+    const contains = screen.getByPlaceholderText('search.content.hint') as HTMLInputElement;
+
+    fireEvent.change(contains, { target: { value: 'informe' } });
+    expect(onQueryValueChange).toHaveBeenLastCalledWith('content:"informe"');
+
+    // The query comes back without the trailing space — it cannot encode one — so a fully
+    // controlled field erased it as soon as it was typed, and the next letter joined the words.
+    rerender(<SearchBar {...baseProps({ value: 'content:"informe"', onQueryValueChange })} />);
+    fireEvent.change(contains, { target: { value: 'informe ' } });
+    expect(contains.value).toBe('informe ');
+
+    fireEvent.change(contains, { target: { value: 'informe mensual' } });
+    expect(onQueryValueChange).toHaveBeenLastCalledWith('content:"informe" content:"mensual"');
   });
 
   it('shows a custom entry, and changes nothing, for a query it cannot represent', () => {

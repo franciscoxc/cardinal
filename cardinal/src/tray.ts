@@ -1,8 +1,10 @@
-import { defaultWindowIcon } from '@tauri-apps/api/app';
+import { defaultWindowIcon, getName } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { Menu, MenuItem, PredefinedMenuItem } from '@tauri-apps/api/menu';
 import { TrayIcon, type TrayIconOptions } from '@tauri-apps/api/tray';
 import i18n from './i18n/config';
+import { checkForUpdates } from './utils/checkForUpdates';
+import { openPreferences } from './utils/openPreferences';
 import { QUICK_LAUNCH_SHORTCUT } from './utils/globalShortcuts';
 
 const TRAY_ID = 'cardinal.tray';
@@ -51,9 +53,32 @@ async function createTray(): Promise<void> {
       void activateMainWindow();
     },
   });
+  // ponytail-keep: About, updates and settings are duplicated from the app menu on purpose.
+  // Turning the tray icon on puts the app in macOS's Accessory policy, which by design removes
+  // both the Dock icon and the menu bar — so with the tray enabled there is nowhere else to reach
+  // them, not even to read which version is running.
+  const appName = (await getName().catch(() => null)) ?? 'Cardinal';
   const menu = await Menu.new({
     items: [
       openItem,
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      await PredefinedMenuItem.new({
+        item: { About: null },
+        text: i18n.t('menu.about', { appName }),
+      }),
+      await MenuItem.new({
+        id: 'tray.checkUpdates',
+        text: i18n.t('menu.checkUpdates'),
+        action: () => void checkForUpdates(),
+      }),
+      await MenuItem.new({
+        id: 'tray.preferences',
+        text: i18n.t('menu.preferences'),
+        action: () => {
+          // The window owns the preferences overlay, so it has to be up to show it.
+          void activateMainWindow().then(openPreferences);
+        },
+      }),
       await PredefinedMenuItem.new({ item: 'Separator' }),
       await PredefinedMenuItem.new({ item: 'Quit', text: i18n.t('tray.quit') }),
     ],

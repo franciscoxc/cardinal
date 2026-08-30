@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FocusEventHandler } from 'react';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -10,6 +10,7 @@ import {
   readFileType,
   setContentTerm,
   setFileType,
+  splitContentWords,
   type FileTypeValue,
 } from '../utils/searchBarQuery';
 
@@ -135,8 +136,25 @@ export function SearchBar({
   const contentTerm = readContentTerm(value);
   const contentIsCustom = contentTerm === CUSTOM;
 
+  // ponytail-keep: the field keeps its own draft instead of showing the query read back.
+  // Reading back is lossy in exactly one place, and it is the place people type: a trailing space
+  // has no word after it, so `informe ` becomes `content:"informe"` and returns as `informe`. Fully
+  // controlled, that erased the space the instant it was typed and the next letter landed against
+  // the previous word — `informe` + space + `m` came out as `informem`, and the only way through
+  // was to pause until the query had settled.
+  const [contentDraft, setContentDraft] = useState<string | null>(null);
+  const contentFromQuery = contentIsCustom ? '' : contentTerm;
+  // The draft only survives while it still means the same query; anything that edits the search
+  // bar directly wins over a stale draft.
+  const draftIsCurrent =
+    contentDraft !== null &&
+    splitContentWords(contentDraft).join('\u0000') ===
+      splitContentWords(contentFromQuery).join('\u0000');
+  const shownContent = draftIsCurrent ? (contentDraft as string) : contentFromQuery;
+
   const handleContentChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
+      setContentDraft(event.target.value);
       onQueryValueChange(setContentTerm(value, event.target.value));
     },
     [onQueryValueChange, value],
@@ -291,7 +309,7 @@ export function SearchBar({
           </label>
           <input
             id="content-search-input"
-            value={contentIsCustom ? '' : contentTerm}
+            value={shownContent}
             onChange={handleContentChange}
             onKeyDown={onKeyDown}
             placeholder={contentIsCustom ? t('search.content.custom') : t('search.content.hint')}
@@ -304,10 +322,14 @@ export function SearchBar({
             onFocus={onFocus}
             onBlur={onBlur}
           />
-          {contentTerm && !contentIsCustom ? (
+          {shownContent && !contentIsCustom ? (
             <ClearButton
               label={t('search.clear')}
-              onClear={() => onQueryValueChange(setContentTerm(value, ''))}
+              onClear={() => {
+                // The draft has to go with it, or clearing leaves the typed text on screen.
+                setContentDraft('');
+                onQueryValueChange(setContentTerm(value, ''));
+              }}
             />
           ) : null}
         </div>
