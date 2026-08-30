@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "正在搜索…",
+    "idleTitle": "搜索整个磁盘",
+    "idleMessage": "开始输入即可查找文件和文件夹。筛选器可指定类型、内容或搜索的文件夹。",
     "error": "搜索出现错误",
     "emptyTitle": "\"{{query}}\" 没有匹配结果",
     "emptyMessage": "尝试调整关键字或筛选条件。",

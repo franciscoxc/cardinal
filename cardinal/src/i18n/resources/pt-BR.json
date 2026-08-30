@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Pesquisando...",
+    "idleTitle": "Busque em todo o disco",
+    "idleMessage": "Comece a digitar para encontrar arquivos e pastas. Os filtros servem para tipo, conteúdo ou a pasta onde procurar.",
     "error": "Erro na busca",
     "emptyTitle": "Nenhum resultado para \"{{query}}\"",
     "emptyMessage": "Tente ajustar suas palavras-chave ou filtros.",

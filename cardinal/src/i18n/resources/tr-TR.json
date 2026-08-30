@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Aranıyor...",
+    "idleTitle": "Tüm diskte arayın",
+    "idleMessage": "Dosya ve klasörleri bulmak için yazmaya başlayın. Filtreler tür, içerik veya aranacak klasör içindir.",
     "error": "Arama hatası",
     "emptyTitle": "\"{{query}}\" için sonuç yok",
     "emptyMessage": "Anahtar kelimeleri veya filtreleri değiştirmeyi deneyin.",

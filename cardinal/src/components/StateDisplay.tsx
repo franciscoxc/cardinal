@@ -7,7 +7,7 @@ type StateProps = {
   message?: React.ReactNode;
 };
 
-export type DisplayState = 'loading' | 'error' | 'empty' | 'results';
+export type DisplayState = 'loading' | 'error' | 'idle' | 'empty' | 'results';
 type EmptyState = Exclude<DisplayState, 'results'>;
 
 type StateDisplayProps = {
@@ -45,6 +45,31 @@ export function StateDisplay({
         icon={<div className="error-icon">!</div>}
         title={t('stateDisplay.error')}
         message={message}
+      />
+    );
+  }
+
+  if (state === 'idle') {
+    return (
+      <State
+        icon={
+          <svg
+            width="72"
+            height="72"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        }
+        title={t('stateDisplay.idleTitle')}
+        message={t('stateDisplay.idleMessage')}
       />
     );
   }

@@ -227,8 +227,10 @@ fn tag_filter_with_all_filter_types() {
         .count();
     assert_eq!(tag_count, 1);
 
-    // Tag filter should be the final element
-    let tail_start = parts.len() - tag_count;
+    // `content:` is now the very last element — it reads files, so it goes behind `tag:`, which
+    // only reads metadata. The tag block sits immediately before it.
+    filter_is_kind(&parts[parts.len() - 1], &FilterKind::Content);
+    let tail_start = parts.len() - 1 - tag_count;
     filter_is_kind(&parts[tail_start], &FilterKind::Tag);
 
     // Everything before the tail must not be a tag filter
@@ -535,8 +537,9 @@ fn all_filter_types_comprehensive() {
     word_is(&parts[3], "word1");
     word_is(&parts[4], "word2");
 
-    // Tags should be the final three elements
-    let tail_start = parts.len() - 3;
+    // `content:` is last of all now; the three tags sit just before it.
+    filter_is_kind(&parts[parts.len() - 1], &FilterKind::Content);
+    let tail_start = parts.len() - 4;
     filter_is_kind(&parts[tail_start], &FilterKind::Tag);
     filter_is_kind(&parts[tail_start + 1], &FilterKind::Tag);
     filter_is_kind(&parts[tail_start + 2], &FilterKind::Tag);

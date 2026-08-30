@@ -314,10 +314,11 @@ fn multiple_filters_with_escaped_quotes() {
     let expr = parse_ok("content:\"a\\\"b\" parent:\"c\\\"d\" tag:\"e\\\"f\"");
     let parts = as_and(&expr);
     assert_eq!(parts.len(), 3);
-    // Optimizer reorders: parent (priority 0), then content, then tag (priority 3)
+    // Optimizer reorders: parent (priority 0), then tag, then content last of all — it opens and
+    // reads whatever still reaches it, so it goes behind the filters that only read metadata.
     filter_is_kind(&parts[0], &FilterKind::Parent);
-    filter_is_kind(&parts[1], &FilterKind::Content);
-    filter_is_kind(&parts[2], &FilterKind::Tag);
+    filter_is_kind(&parts[1], &FilterKind::Tag);
+    filter_is_kind(&parts[2], &FilterKind::Content);
 }
 
 #[test]

@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Ricerca in corso...",
+    "idleTitle": "Cerca in tutto il disco",
+    "idleMessage": "Inizia a digitare per trovare file e cartelle. I filtri servono per tipo, contenuto o la cartella in cui cercare.",
     "error": "Errore di ricerca",
     "emptyTitle": "Nessun risultato per \"{{query}}\"",
     "emptyMessage": "Prova a modificare parole chiave o filtri.",

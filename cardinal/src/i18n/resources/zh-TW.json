@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "正在搜尋…",
+    "idleTitle": "搜尋整個磁碟",
+    "idleMessage": "開始輸入即可尋找檔案和資料夾。篩選器可指定類型、內容或搜尋的資料夾。",
     "error": "搜尋發生錯誤",
     "emptyTitle": "「{{query}}」沒有符合結果",
     "emptyMessage": "試著調整關鍵字或篩選條件。",

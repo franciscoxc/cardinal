@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "검색 중...",
+    "idleTitle": "디스크 전체 검색",
+    "idleMessage": "입력을 시작하면 파일과 폴더를 찾습니다. 필터로 종류, 내용, 검색할 폴더를 지정할 수 있습니다.",
     "error": "검색 오류",
     "emptyTitle": "\"{{query}}\"에 대한 결과가 없습니다",
     "emptyMessage": "키워드나 필터를 조정해 보세요.",

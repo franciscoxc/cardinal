@@ -73,3 +73,27 @@ fn metadata_tail_preserves_non_metadata_order() {
     filter_is_kind(&p[l - 2], &FilterKind::DateModified);
     filter_is_kind(&p[l - 1], &FilterKind::DateCreated);
 }
+
+/// `content:` opens and reads every candidate that reaches it, so it has to be the last thing in
+/// the chain no matter where the user wrote it. It used to share a priority with `type:`, and a
+/// stable sort then took the cost straight from the typing order: `content:x type:email` read
+/// every file on the disk while `type:email content:x` read only the mail.
+#[test]
+fn content_filter_runs_after_the_cheap_ones() {
+    let written_first = parse_ok("content:factura type:email");
+    let parts = as_and(&written_first);
+    filter_is_kind(&parts[0], &FilterKind::Type);
+    filter_is_kind(&parts[1], &FilterKind::Content);
+
+    let written_last = parse_ok("type:email content:factura");
+    let parts = as_and(&written_last);
+    filter_is_kind(&parts[0], &FilterKind::Type);
+    filter_is_kind(&parts[1], &FilterKind::Content);
+
+    // Even after `tag:`, which was the previous tail: reading files beats reading xattrs.
+    let with_tag = parse_ok("content:factura tag:Trabajo informe");
+    let parts = as_and(&with_tag);
+    word_is(&parts[0], "informe");
+    filter_is_kind(&parts[1], &FilterKind::Tag);
+    filter_is_kind(&parts[2], &FilterKind::Content);
+}

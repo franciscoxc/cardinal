@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Searching...",
+    "idleTitle": "Search your whole disk",
+    "idleMessage": "Start typing to find files and folders. Use the filters for type, content or a folder to look in.",
     "error": "Search Error",
     "emptyTitle": "No results for \"{{query}}\"",
     "emptyMessage": "Try adjusting your keywords or filters.",

@@ -265,6 +265,29 @@ export function useFileSearch(): UseFileSearchResult {
     const startTs = performance.now();
     const isInitial = !hasInitialSearchRunRef.current;
 
+    // ponytail-keep: nothing to ask for means nothing to ask. An empty query matches every node,
+    // and the engine answers it in about 17ms — but handing millions of indices to the webview
+    // took nearly three seconds on a real index, and it happened twice: once at launch, and again
+    // every time the search field was cleared. Nobody reads a list of the whole disk; the pane
+    // says what to do instead.
+    if (!query && !directoryQuery) {
+      hasInitialSearchRunRef.current = true;
+      cancelTimer(loadingDelayTimerRef);
+      dispatch({
+        type: 'SEARCH_SUCCESS',
+        payload: {
+          results: [],
+          query,
+          directoryQuery,
+          highlightTerms: [],
+          contentTerms: [],
+          duration: 0,
+          count: 0,
+        },
+      });
+      return;
+    }
+
     dispatch({ type: 'SEARCH_REQUEST', payload: { immediate: isInitial } });
 
     if (!isInitial) {

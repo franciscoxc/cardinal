@@ -128,7 +128,8 @@ fn optimize_or(parts: Vec<Expr>) -> Expr {
 /// - 0: Scope filters (`infolder:`, `parent:`) - narrow search space first
 /// - 1: Non-filter terms (words, phrases, boolean ops) - cheap string matching
 /// - 2: Generic filters (`ext:`, `type:`, `size:`, etc.) - moderate cost
-/// - 3: Tag filters (`tag:`) - expensive metadata access, runs last
+/// - 3: Tag filters (`tag:`) - expensive metadata access
+/// - 4: Content filters (`content:`) - opens and reads every remaining candidate, so it runs last
 fn reorder_by_priority(parts: &mut Vec<Expr>) {
     if parts.len() <= 1 {
         return;
@@ -139,6 +140,13 @@ fn reorder_by_priority(parts: &mut Vec<Expr>) {
             Expr::Term(Term::Filter(filter)) => match filter.kind {
                 FilterKind::InFolder | FilterKind::Parent => 0,
                 FilterKind::Tag => 3,
+                // ponytail-keep: last, and by a wide margin. Every other filter answers from the
+                // index in memory; this one opens each remaining candidate and reads it. It used
+                // to share priority 2 with `type:`, which made a stable sort decide the cost from
+                // the order the user happened to type in: `content:x type:email` read every file
+                // on the disk, `type:email content:x` read only the mail. Measured 60x on a tree
+                // of 6100 files, and the gap grows with the index.
+                FilterKind::Content => 4,
                 _ => 2,
             },
             _ => 1,

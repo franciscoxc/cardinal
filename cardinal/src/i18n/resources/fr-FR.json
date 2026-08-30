@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Recherche en cours...",
+    "idleTitle": "Cherchez dans tout le disque",
+    "idleMessage": "Commencez à taper pour trouver des fichiers et des dossiers. Les filtres servent au type, au contenu ou au dossier où chercher.",
     "error": "Erreur de recherche",
     "emptyTitle": "Aucun résultat pour \"{{query}}\"",
     "emptyMessage": "Essayez d'ajuster vos mots-clés ou filtres.",

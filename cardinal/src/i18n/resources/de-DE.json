@@ -40,6 +40,8 @@
   },
   "stateDisplay": {
     "loading": "Suche läuft...",
+    "idleTitle": "Die ganze Festplatte durchsuchen",
+    "idleMessage": "Tippen Sie los, um Dateien und Ordner zu finden. Die Filter gelten für Typ, Inhalt oder den Ordner, in dem gesucht wird.",
     "error": "Suchfehler",
     "emptyTitle": "Keine Ergebnisse für \"{{query}}\"",
     "emptyMessage": "Passe deine Suchbegriffe oder Filter an.",

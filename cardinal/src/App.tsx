@@ -415,6 +415,9 @@ function App() {
     if (!initialFetchCompleted) return 'loading';
     if (showLoadingUI) return 'loading';
     if (searchError) return 'error';
+    // Nothing typed yet is not the same as nothing found, and the pane has to say so: the
+    // "no matches" wording under an untouched search field reads like the app is broken.
+    if (results.length === 0 && !currentQuery && !currentDirectoryQuery) return 'idle';
     if (results.length === 0) return 'empty';
     return 'results';
   })();

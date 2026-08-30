@@ -51,6 +51,17 @@ const renderReadySearchHook = async () => {
   return rendered;
 };
 
+/// Startup no longer searches for the empty query, so a test that needs results has to ask for
+/// something. `informe` is arbitrary; what matters is that it is not empty.
+const renderWithResults = async () => {
+  const rendered = await renderReadySearchHook();
+  await act(async () => {
+    rendered.result.current.queueSearch('informe', { immediate: true });
+  });
+  await waitFor(() => expect(rendered.result.current.state.currentQuery).toBe('informe'));
+  return rendered;
+};
+
 describe('useFileSearch', () => {
   beforeEach(() => {});
 
@@ -58,10 +69,34 @@ describe('useFileSearch', () => {
     vi.clearAllMocks();
   });
 
+  it('never asks the backend for an empty query, at startup or after clearing the field', async () => {
+    mockSearchSuccess([1, 2, 3] as SlabIndex[]);
+    const { result } = await renderReadySearchHook();
+
+    // Startup: the whole index would come back, and nobody reads a list of the whole disk.
+    expect(mockedInvoke).not.toHaveBeenCalledWith('search', expect.anything());
+    expect(result.current.state.results).toEqual([]);
+    expect(result.current.state.initialFetchCompleted).toBe(true);
+
+    await act(async () => {
+      result.current.queueSearch('informe', { immediate: true });
+    });
+    await waitFor(() => expect(result.current.state.results).toEqual([1, 2, 3]));
+
+    mockedInvoke.mockClear();
+    await act(async () => {
+      result.current.queueSearch('', { immediate: true });
+    });
+
+    // Clearing the field is the same request, and used to cost the same three seconds.
+    await waitFor(() => expect(result.current.state.results).toEqual([]));
+    expect(mockedInvoke).not.toHaveBeenCalledWith('search', expect.anything());
+  });
+
   it('reuses backend results array without copying', async () => {
     const backendResults = [1, 2, 3] as SlabIndex[];
     mockSearchSuccess(backendResults);
-    const { result } = await renderReadySearchHook();
+    const { result } = await renderWithResults();
 
     expect(result.current.state.results).toBe(backendResults);
     expect(result.current.state.resultCount).toBe(backendResults.length);
@@ -70,7 +105,7 @@ describe('useFileSearch', () => {
   it('ignores results when backend returns CANCELLED status', async () => {
     const initialResults = [1, 2, 3] as SlabIndex[];
     mockSearchSuccess(initialResults);
-    const { result } = await renderReadySearchHook();
+    const { result } = await renderWithResults();
     expect(result.current.state.results).toBe(initialResults);
 
     mockSearchCancelled();
@@ -82,7 +117,7 @@ describe('useFileSearch', () => {
     // Cancelled results should not overwrite state, and loading should settle.
     await waitFor(() => {
       expect(result.current.state.results).toBe(initialResults);
-      expect(result.current.state.currentQuery).toBe(''); // Query doesn't update on cancelled search
+      expect(result.current.state.currentQuery).toBe('informe'); // Query doesn't update on cancelled search
       expect(result.current.state.showLoadingUI).toBe(false);
       expect(result.current.state.initialFetchCompleted).toBe(true);
     });
@@ -90,7 +125,7 @@ describe('useFileSearch', () => {
 
   it('does not send directory scope while the scope input is inactive', async () => {
     mockSearchSuccess();
-    const { result } = await renderReadySearchHook();
+    const { result } = await renderWithResults();
     mockedInvoke.mockClear();
 
     act(() => {
@@ -99,7 +134,7 @@ describe('useFileSearch', () => {
 
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenCalledWith('search', {
-        query: null,
+        query: 'informe',
         directoryQuery: null,
         options: {
           caseInsensitive: true,
@@ -110,14 +145,14 @@ describe('useFileSearch', () => {
 
   it('re-runs search when directory scope is toggled and controls the directory payload', async () => {
     mockSearchSuccess();
-    const { result } = await renderReadySearchHook();
+    const { result } = await renderWithResults();
 
     act(() => {
       result.current.queueDirectorySearch('Projects', { immediate: true });
     });
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenLastCalledWith('search', {
-        query: null,
+        query: 'informe',
         directoryQuery: null,
         options: {
           caseInsensitive: true,
@@ -131,7 +166,7 @@ describe('useFileSearch', () => {
     });
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenLastCalledWith('search', {
-        query: null,
+        query: 'informe',
         directoryQuery: 'Projects',
         options: {
           caseInsensitive: true,
@@ -146,7 +181,7 @@ describe('useFileSearch', () => {
     });
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenLastCalledWith('search', {
-        query: null,
+        query: 'informe',
         directoryQuery: null,
         options: {
           caseInsensitive: true,
