@@ -62,9 +62,7 @@ describe('contains', () => {
   });
 
   it('mixes a phrase with loose words', () => {
-    expect(setContentTerm('', '"hola mundo" firma')).toBe(
-      'content:"hola mundo" content:"firma"',
-    );
+    expect(setContentTerm('', '"hola mundo" firma')).toBe('content:"hola mundo" content:"firma"');
   });
 
   it('keeps a trailing space, which the engine searches for', () => {

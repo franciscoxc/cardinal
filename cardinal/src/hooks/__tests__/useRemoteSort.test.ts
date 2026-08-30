@@ -161,7 +161,9 @@ describe('useRemoteSort', () => {
 
   it('allows toggling sort state for empty results without remote sorting', async () => {
     const empty: SlabIndex[] = [];
-    const { result } = renderHook(() => useRemoteSort(sortOptions({ results: empty, resultsVersion: 1 })));
+    const { result } = renderHook(() =>
+      useRemoteSort(sortOptions({ results: empty, resultsVersion: 1 })),
+    );
 
     expect(result.current.sortButtonsDisabled).toBe(false);
 

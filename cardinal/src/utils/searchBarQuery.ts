@@ -159,8 +159,6 @@ export const setContentTerm = (query: string, term: string): string => {
   if (words.length === 0) {
     return base;
   }
-  const tokens = words
-    .map((word) => `content:"${word.replace(/(["\\])/g, '\\$1')}"`)
-    .join(' ');
+  const tokens = words.map((word) => `content:"${word.replace(/(["\\])/g, '\\$1')}"`).join(' ');
   return base ? `${base} ${tokens}` : tokens;
 };

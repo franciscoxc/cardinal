@@ -95,10 +95,7 @@ export const useRemoteSort = ({
     readStoredThreshold(SORT_THRESHOLD_STORAGE_KEY, DEFAULT_SORTABLE_RESULT_THRESHOLD),
   );
   const [deepSortThreshold, setDeepSortThresholdState] = useState<number>(() =>
-    readStoredThreshold(
-      DEEP_SORT_THRESHOLD_STORAGE_KEY,
-      DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD,
-    ),
+    readStoredThreshold(DEEP_SORT_THRESHOLD_STORAGE_KEY, DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD),
   );
   const [isSorting, setIsSorting] = useState(false);
   const sortRequestRef = useRef(0);
@@ -114,9 +111,7 @@ export const useRemoteSort = ({
   // anything, so it gets a limit of its own rather than borrowing the general one.
   const canSortBySizeDeeply = !deepFolderSizes || results.length <= deepSortThreshold;
   const canSortBySize = canSort && canSortBySizeDeeply;
-  const deepSortActive = Boolean(
-    deepFolderSizes && canSortBySize && sortState?.key === 'size',
-  );
+  const deepSortActive = Boolean(deepFolderSizes && canSortBySize && sortState?.key === 'size');
 
   const shouldUseSortedResults = Boolean(sortState && canSort);
   const displayedResults = shouldUseSortedResults ? sortedResults : results;
