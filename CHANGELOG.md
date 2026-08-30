@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.7 — 2026-08-30
+- Run `content:` last, whatever order it was written in. It shared a priority with `type:`, so a stable sort took the cost straight from the typing order: `content:factura type:email` opened and read every file on the disk, while `type:email content:factura` read only the mail. Measured 60x apart on a tree of 6,100 files, and the gap grows with the index — on a real disk it is the app going unresponsive. Worse, the search bar itself decided which one you got: the "Contains" field and the type dropdown both append their filter, so the order came from whichever control you touched last.
+- Stop searching for the empty query. It matched every node, and handing millions of indices to the webview took nearly three seconds — at launch, and again every time the search field was cleared, which the clear button put one click away. The results pane now says what to type instead, and the status bar no longer reports "0 results in 0 ms" before anything was searched for.
+
 ## 0.3.6 — 2026-08-28
 - Search for every word the "Contains" field is given, instead of the exact phrase. Two words there used to mean "these words, adjacent" — the opposite of what the main bar does with the same input, ten pixels away — so typing two words found almost nothing and nothing said why. Quotes still mean the phrase, and the field's tooltip says so.
 - Find Outlook mail with `type:email`. Legacy Outlook for Mac keeps every message as its own file (`.olk15Message` for the header, `.olk15MsgSource` for the full source, `.olk15MsgAttach` per attachment, and the `.olk14` generation before it), none of which were recognised. Whole mailboxes are covered too: `.olm`, `.pst`, `.ost`, `.nst` and `.oft`. `type:outlook` is an alias. The current Outlook for Mac keeps its live mail in a database rather than in files, so only its `.olm` archives can be found.
