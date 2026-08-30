@@ -241,8 +241,9 @@
       "open": "Open page"
     },
     "mounted": {
-      "title": "Update ready",
-      "body": "Cardinal {{latest}} was downloaded to your Downloads folder and opened. Drag it onto Applications to install it, replacing the current version."
+      "title": "Cardinal {{latest}} is ready",
+      "body": "Drag the new version onto the Applications folder.",
+      "quit": "Quit Cardinal"
     },
     "downloadFailed": {
       "title": "Download failed",

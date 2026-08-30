@@ -241,8 +241,9 @@
       "open": "Ouvrir la page"
     },
     "mounted": {
-      "title": "Mise à jour prête",
-      "body": "Cardinal {{latest}} a été téléchargé dans votre dossier Téléchargements et ouvert. Faites-le glisser sur Applications pour l'installer, en remplaçant la version actuelle."
+      "title": "Cardinal {{latest}} est prêt",
+      "body": "Faites glisser la nouvelle version dans le dossier Applications.",
+      "quit": "Quitter Cardinal"
     },
     "downloadFailed": {
       "title": "Échec du téléchargement",

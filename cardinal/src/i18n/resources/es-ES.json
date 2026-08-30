@@ -241,8 +241,9 @@
       "open": "Abrir página"
     },
     "mounted": {
-      "title": "Actualización lista",
-      "body": "Cardinal {{latest}} se descargó en tu carpeta de Descargas y se abrió. Arrastralo sobre Aplicaciones para instalarlo, reemplazando la versión actual."
+      "title": "Cardinal {{latest}} está lista",
+      "body": "Arrastrá la nueva versión a la carpeta de Aplicaciones.",
+      "quit": "Cerrar Cardinal"
     },
     "downloadFailed": {
       "title": "No se pudo descargar",

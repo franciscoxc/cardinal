@@ -241,8 +241,9 @@
       "open": "Abrir página"
     },
     "mounted": {
-      "title": "Atualização pronta",
-      "body": "O Cardinal {{latest}} foi baixado para a pasta Downloads e aberto. Arraste-o para Aplicativos para instalar, substituindo a versão atual."
+      "title": "O Cardinal {{latest}} está pronto",
+      "body": "Arraste a nova versão para a pasta Aplicativos.",
+      "quit": "Fechar o Cardinal"
     },
     "downloadFailed": {
       "title": "Falha no download",

@@ -241,8 +241,9 @@
       "open": "Sayfayı aç"
     },
     "mounted": {
-      "title": "Güncelleme hazır",
-      "body": "Cardinal {{latest}} İndirilenler klasörüne indirildi ve açıldı. Mevcut sürümün yerine kurmak için Uygulamalar'a sürükleyin."
+      "title": "Cardinal {{latest}} hazır",
+      "body": "Yeni sürümü Uygulamalar klasörüne sürükleyin.",
+      "quit": "Cardinal'ı kapat"
     },
     "downloadFailed": {
       "title": "İndirilemedi",

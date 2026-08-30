@@ -240,8 +240,9 @@
       "open": "開啟頁面"
     },
     "mounted": {
-      "title": "更新已就緒",
-      "body": "Cardinal {{latest}} 已下載到「下載項目」並開啟。將它拖到「應用程式」即可安裝，取代目前版本。"
+      "title": "Cardinal {{latest}} 已就緒",
+      "body": "把新版本拖到「應用程式」資料夾。",
+      "quit": "結束 Cardinal"
     },
     "downloadFailed": {
       "title": "下載失敗",

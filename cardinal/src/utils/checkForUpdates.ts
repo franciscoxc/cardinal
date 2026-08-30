@@ -140,9 +140,14 @@ export async function checkForUpdates(): Promise<void> {
 
     try {
       await invoke('download_and_mount_update', { url: dmg });
-      await message(t('updates.mounted.body', { latest }), {
-        title: t('updates.mounted.title'),
+      // ponytail-keep: quitting is part of the instruction, not a courtesy. macOS will not let the
+      // new app replace the one that is running, so telling someone to drag it while Cardinal is
+      // open is telling them to fail. The button says what it does rather than "OK".
+      await message(t('updates.mounted.body'), {
+        title: t('updates.mounted.title', { latest }),
+        okLabel: t('updates.mounted.quit'),
       });
+      await invoke('quit_app');
     } catch (downloadError) {
       console.error('Update download failed', downloadError);
       // Downloading is a convenience; the page is the thing that always works.

@@ -19,8 +19,9 @@ use commands::{
     DeepFolderSizes, NodeInfoRequest, SearchJob, SearchState, WatchConfigUpdate,
     activate_main_window, close_quicklook, copy_files_to_clipboard, download_and_mount_update,
     get_app_status, get_nodes_info, get_sorted_view, hide_main_window, normalize_watch_config,
-    open_in_finder, open_path, search, set_tray_activation_policy, set_watch_config, start_logic,
-    toggle_main_window, toggle_quicklook, trigger_rescan, update_icon_viewport, update_quicklook,
+    open_in_finder, open_path, quit_app, search, set_tray_activation_policy, set_watch_config,
+    start_logic, toggle_main_window, toggle_quicklook, trigger_rescan, update_icon_viewport,
+    update_quicklook,
 };
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded, unbounded};
 use lifecycle::{
@@ -151,6 +152,7 @@ pub fn run() -> Result<()> {
             set_tray_activation_policy,
             copy_files_to_clipboard,
             download_and_mount_update,
+            quit_app,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -640,20 +640,53 @@ pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<St
         return Err(format!("download failed ({status})"));
     }
 
-    // No `-nobrowse`: opening the volume in Finder is the point — that is the window the app gets
-    // dragged from.
+    // No `-nobrowse`: the volume has to be browsable, since the whole point is dragging the app out
+    // of it. Its output is captured because it names the mount point, which is the only way to know
+    // where to open the window.
     let mounted = Command::new("hdiutil")
         .arg("attach")
         .arg(&target)
-        .status()
+        .output()
         .map_err(|e| format!("could not run hdiutil: {e}"))?;
 
-    if !mounted.success() {
-        return Err(format!("could not mount the disk image ({mounted})"));
+    if !mounted.status.success() {
+        return Err(format!(
+            "could not mount the disk image ({})",
+            String::from_utf8_lossy(&mounted.stderr).trim()
+        ));
     }
 
-    info!("Update downloaded to {target:?} and mounted");
-    Ok(target.to_string_lossy().into_owned())
+    // hdiutil prints tab-separated columns and the mount point is the last one, on whichever line
+    // actually got mounted — the earlier lines are the container partitions, which have none.
+    let mount_point = String::from_utf8_lossy(&mounted.stdout)
+        .lines()
+        .filter_map(|line| line.rsplit('\t').next())
+        .map(str::trim)
+        .find(|field| field.starts_with("/Volumes/"))
+        .map(str::to_string)
+        .ok_or_else(|| "mounted, but hdiutil named no mount point".to_string())?;
+
+    // ponytail-keep: mounting is not showing. `hdiutil attach` makes the volume browsable but does
+    // not open anything, so the window to drag the app out of never appeared and the instruction to
+    // drag it made no sense. Opening the mount point is what puts that window on screen.
+    if let Err(e) = Command::new("open").arg(&mount_point).spawn() {
+        error!("Mounted the update but could not show it in Finder: {e}");
+    }
+
+    info!("Update downloaded to {target:?} and mounted at {mount_point}");
+    Ok(mount_point)
+}
+
+/// Quits the app the same way the menu does, flushing the cache on the way out.
+///
+/// Exists for the update flow: the new version cannot be dragged over the running one, so the
+/// dialog that says to drag it has to be able to get out of the way.
+#[tauri::command]
+pub async fn quit_app(app: AppHandle) {
+    info!("Quit requested to make way for an update");
+    // Through Tauri rather than `process::exit`, so `RunEvent::ExitRequested` still runs and the
+    // index is written to disk — otherwise the new version starts by rebuilding it from scratch.
+    app.exit(0);
 }
 
 #[tauri::command]

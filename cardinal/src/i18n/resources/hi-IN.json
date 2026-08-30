@@ -231,8 +231,9 @@
       "open": "पेज खोलें"
     },
     "mounted": {
-      "title": "अपडेट तैयार है",
-      "body": "Cardinal {{latest}} डाउनलोड फ़ोल्डर में सहेजकर खोल दिया गया। मौजूदा संस्करण की जगह इंस्टॉल करने के लिए इसे Applications में खींचें।"
+      "title": "Cardinal {{latest}} तैयार है",
+      "body": "नए संस्करण को Applications फ़ोल्डर में खींचें।",
+      "quit": "Cardinal बंद करें"
     },
     "downloadFailed": {
       "title": "डाउनलोड नहीं हो सका",

@@ -241,8 +241,9 @@
       "open": "페이지 열기"
     },
     "mounted": {
-      "title": "업데이트 준비됨",
-      "body": "Cardinal {{latest}}을(를) 다운로드 폴더에 받아서 열었습니다. 응용 프로그램으로 끌어다 놓으면 현재 버전을 대체해 설치됩니다."
+      "title": "Cardinal {{latest}} 준비 완료",
+      "body": "새 버전을 응용 프로그램 폴더로 끌어다 놓으세요.",
+      "quit": "Cardinal 종료"
     },
     "downloadFailed": {
       "title": "다운로드 실패",

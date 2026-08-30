@@ -241,8 +241,9 @@
       "open": "Seite öffnen"
     },
     "mounted": {
-      "title": "Update bereit",
-      "body": "Cardinal {{latest}} wurde in den Ordner \"Downloads\" geladen und geöffnet. Ziehen Sie es auf \"Programme\", um es zu installieren und die aktuelle Version zu ersetzen."
+      "title": "Cardinal {{latest}} ist bereit",
+      "body": "Ziehen Sie die neue Version in den Ordner \"Programme\".",
+      "quit": "Cardinal beenden"
     },
     "downloadFailed": {
       "title": "Download fehlgeschlagen",
