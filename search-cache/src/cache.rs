@@ -1055,8 +1055,13 @@ impl SearchCache {
 
     pub fn handle_fs_events(&mut self, events: Vec<FsEvent>) -> Result<(), HandleFSEError> {
         let max_event_id = events.iter().map(|e| e.id).max();
-        // If rescan needed, early exit.
-        if events.iter().any(|event| {
+        // ponytail-keep: note the rescan, then process the batch anyway. This used to return early,
+        // which threw away every other event that came bundled with the one asking for a rescan —
+        // and since nothing rescans afterwards, those changes were lost for good. A single
+        // root-level event was enough, so directories wiped in one go stayed in the index forever
+        // while files deleted on their own disappeared cleanly. Measured on a real index: 100% of
+        // the entries under DerivedData and .Trash were gone from disk, against 0% under Documents.
+        let needs_rescan = events.iter().any(|event| {
             if event.flag.contains(EventFlag::HistoryDone) {
                 info!("History processing done: {:?}", event);
             }
@@ -1066,11 +1071,19 @@ impl SearchCache {
             } else {
                 false
             }
-        }) {
-            self.rescan_count = self.rescan_count.saturating_add(1);
-            return Err(HandleFSEError::Rescan);
-        }
+        });
+
+        let root = self.file_nodes.path().to_path_buf();
         for scan_path in scan_paths(events) {
+            // ponytail-keep: never the watch root itself. `scan_path_recursive` asks for the
+            // parent and expects one — with the root at `/` there is none, and it panics, taking
+            // the background thread with it. The early return that used to discard the batch was
+            // also what kept this path unreachable; processing the batch reopens it. A root event
+            // is what asks for a full rescan anyway, and that is reported below.
+            if scan_path == root {
+                info!("Skipping the watch root; it is what the rescan below is for");
+                continue;
+            }
             info!("Scanning path: {scan_path:?}");
             let folder = self.scan_path_recursive(&scan_path);
             if folder.is_some() {
@@ -1079,6 +1092,11 @@ impl SearchCache {
         }
         if let Some(max_event_id) = max_event_id {
             self.update_last_event_id(max_event_id);
+        }
+
+        if needs_rescan {
+            self.rescan_count = self.rescan_count.saturating_add(1);
+            return Err(HandleFSEError::Rescan);
         }
         Ok(())
     }
@@ -3748,6 +3766,11 @@ mod tests {
 
         cache.handle_fs_events(mock_events).unwrap_err();
 
+        // Still reports that a rescan is needed, and still leaves the index alone: an event on the
+        // watch root cannot be scanned incrementally — there is no parent to hang the result from
+        // when the root is `/` — so a full rescan is the only answer, and that is what the error
+        // asks for. Events on anything below the root are applied even in this batch; see
+        // `a_rescan_event_does_not_discard_the_rest_of_the_batch`.
         assert_eq!(cache.file_nodes.len(), 1 + depth(temp_path));
         assert_eq!(cache.name_index.len(), 1 + depth(temp_path));
     }
@@ -3888,6 +3911,63 @@ mod tests {
             cache.file_nodes[dir_node_idx].metadata.is_some(),
             "Metadata for directory node created by walk_fs_new should be Some"
         );
+    }
+
+    /// One event asking for a rescan must not take the rest of the batch down with it.
+    ///
+    /// Deletions are applied correctly on their own, but they arrive batched with everything else,
+    /// and a single event at the watch root made the whole batch return early. Nothing rescanned
+    /// afterwards, so those deletions were simply lost — which is why a directory wiped in one go
+    /// stays in the index forever while a file deleted on its own disappears cleanly.
+    #[test]
+    fn a_rescan_event_does_not_discard_the_rest_of_the_batch() {
+        let temp_dir = TempDir::new("batch_with_rescan").unwrap();
+        let root = temp_dir.path();
+        fs::create_dir_all(root.join("keep")).unwrap();
+        fs::write(root.join("keep/stays.txt"), b"x").unwrap();
+        fs::write(root.join("goes.txt"), b"x").unwrap();
+
+        let mut cache = SearchCache::walk_fs(root);
+        let found = |cache: &mut SearchCache, name: &str| {
+            guard_indices(cache.search_with_options(
+                name,
+                SearchOptions {
+                    case_insensitive: true,
+                },
+                CancellationToken::noop(),
+            ))
+            .len()
+        };
+        assert_eq!(found(&mut cache, "goes.txt"), 1, "indexed to begin with");
+
+        // Delete it for real, then deliver the deletion in the same batch as an event at the watch
+        // root — which is what `RootChanged` and any root-level event look like.
+        fs::remove_file(root.join("goes.txt")).unwrap();
+        let batch = vec![
+            FsEvent {
+                path: root.to_path_buf(),
+                id: cache.last_event_id + 1,
+                flag: EventFlag::RootChanged,
+            },
+            FsEvent {
+                path: root.join("goes.txt"),
+                id: cache.last_event_id + 2,
+                flag: EventFlag::ItemRemoved,
+            },
+        ];
+        let outcome = cache.handle_fs_events(batch);
+
+        // Saying a rescan is needed is fine and expected; losing the deletion is not.
+        assert!(
+            matches!(outcome, Err(HandleFSEError::Rescan)),
+            "still asks for a rescan"
+        );
+        assert_eq!(
+            found(&mut cache, "goes.txt"),
+            0,
+            "the deletion in the batch has to be applied even though a rescan was requested"
+        );
+        assert_eq!(found(&mut cache, "stays.txt"), 1, "untouched files stay");
     }
 
     #[test]
