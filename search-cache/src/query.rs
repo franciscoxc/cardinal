@@ -905,6 +905,10 @@ impl SearchCache {
     ) -> Option<bool> {
         token.is_cancelled()?;
 
+        if is_dataless(path) {
+            return Some(false);
+        }
+
         let Ok(mut file) = File::open(path) else {
             return Some(false);
         };
@@ -1062,6 +1066,25 @@ const SNIPPET_AFTER_BYTES: usize = 160;
 //
 // ponytail: no cancellation token; the caller hydrates visible rows only, over files the content
 // filter just read (so the pages are cached). Wire one in if snippets ever run ahead of the search.
+/// Whether the file has no local copy, so opening it would make macOS fetch it.
+///
+/// ponytail-keep: checked with `symlink_metadata`, which reads the flag without materialising
+/// anything — opening the file is what triggers the download. Searching content over a home folder
+/// synced with iCloud would otherwise pull every PDF, video and archive that is not on the disk,
+/// silently and in the background, just because someone typed a word. This project already fixed
+/// the same trap once for thumbnails, in 0.1.1.
+///
+/// The cost is honest and worth stating: matches inside files that are not downloaded are not
+/// found. That beats spending someone's bandwidth without asking.
+fn is_dataless(path: &Path) -> bool {
+    use std::os::macos::fs::MetadataExt;
+    // SF_DATALESS from <sys/stat.h>: set on a placeholder whose contents live in the cloud.
+    const SF_DATALESS: u32 = 0x4000_0000;
+    std::fs::symlink_metadata(path)
+        .map(|meta| meta.st_flags() & SF_DATALESS != 0)
+        .unwrap_or(false)
+}
+
 pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Option<String> {
     let needle = if case_insensitive {
         term.to_ascii_lowercase().into_bytes()
@@ -1069,6 +1092,10 @@ pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Optio
         term.as_bytes().to_vec()
     };
     if needle.is_empty() {
+        return None;
+    }
+
+    if is_dataless(path) {
         return None;
     }
 

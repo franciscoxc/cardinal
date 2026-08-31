@@ -1638,3 +1638,48 @@ fn test_type_spreadsheet_all_variants() {
     let results = cache.search("type:spreadsheet").unwrap();
     assert_eq!(results.len(), 5);
 }
+
+/// A file whose contents live in the cloud must not be opened by a content search.
+///
+/// The flag is set here with `chflags dataless`, the same one iCloud sets on a file it has not
+/// downloaded. Opening such a file asks macOS to fetch it, so a search over a synced home folder
+/// would quietly pull everything that is not on the disk.
+#[test]
+fn content_search_does_not_open_files_that_would_be_downloaded() {
+    let tmp = TempDir::new("dataless_content").unwrap();
+    let dir = tmp.path();
+    fs::write(dir.join("local.txt"), b"contiene la palabra factura").unwrap();
+    fs::write(dir.join("cloud.txt"), b"contiene la palabra factura").unwrap();
+
+    let _ = std::process::Command::new("chflags")
+        .arg("dataless")
+        .arg(dir.join("cloud.txt"))
+        .status();
+    // `chflags dataless` reports success and does nothing on a plain file — only the cloud daemon
+    // sets it for real. Read the flag back rather than trusting the exit code, or this test passes
+    // while proving nothing.
+    let marked = {
+        use std::os::macos::fs::MetadataExt;
+        std::fs::symlink_metadata(dir.join("cloud.txt"))
+            .map(|m| m.st_flags() & 0x4000_0000 != 0)
+            .unwrap_or(false)
+    };
+    if !marked {
+        eprintln!("SKIP: this machine will not let a plain file be marked dataless");
+        return;
+    }
+
+    let mut cache = SearchCache::walk_fs(dir);
+    let hits = cache.search("content:factura").unwrap();
+    let names: Vec<String> = hits
+        .iter()
+        .filter_map(|i| cache.node_path(*i))
+        .filter_map(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .collect();
+
+    assert_eq!(
+        names,
+        vec!["local.txt".to_string()],
+        "the local file matches; the one that would have to be downloaded is left alone"
+    );
+}
