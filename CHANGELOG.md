@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0 — 2026-08-30
+- Group folders ahead of files, whichever column is sorting. A "Folders on top" switch in Preferences, on by default. The engine already knew what was a directory — the type is packed into the index during the walk, so no `stat` is involved — but it only ever used it to break ties between equal names, which in practice never happened. Grouping sits ahead of the chosen key and outside the direction flip, so folders stay on top whether a column sorts up or down, and your order still decides everything within each group.
+
 ## 0.3.9 — 2026-08-30
 - Show what is in a new release, and download it from the same dialog. "Check for Updates…" used to say only that a version existed and send you to a web page; it now lists what changed and, on one click, downloads the disk image to your Downloads folder and opens it, leaving the drag onto Applications to you. Deliberately not a silent auto-updater: nothing is replaced without you doing it, and the app still makes no network request unless you ask it to.
 

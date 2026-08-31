@@ -28,6 +28,7 @@ const sortOptions = (
   locale: 'en-US',
   folderSizes: false,
   deepFolderSizes: false,
+  foldersFirst: false,
   formatDisabledTooltip: () => null,
   formatSizeDisabledTooltip: () => null,
   ...overrides,
@@ -65,6 +66,7 @@ describe('useRemoteSort', () => {
         sort: { key: 'filename', direction: 'asc' },
         folderSizes: false,
         deepFolderSizes: false,
+        foldersFirst: false,
       });
     });
     await waitFor(() => {
@@ -346,6 +348,7 @@ describe('useRemoteSort', () => {
         sort: { key: 'size', direction: 'asc' },
         folderSizes: true,
         deepFolderSizes: true,
+        foldersFirst: false,
       });
     });
     expect(result.current.deepSortOwnsWalks).toBe(true);
@@ -363,6 +366,7 @@ describe('useRemoteSort', () => {
         sort: { key: 'size', direction: 'asc' },
         folderSizes: true,
         deepFolderSizes: false,
+        foldersFirst: false,
       });
     });
   });

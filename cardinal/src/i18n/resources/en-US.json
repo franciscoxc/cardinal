@@ -172,6 +172,10 @@
     "save": "Save",
     "reset": "Restore defaults",
     "close": "Close",
+    "foldersFirst": {
+      "label": "Folders on top",
+      "hint": "Group folders ahead of files, whichever column is sorting."
+    },
     "folderSizes": {
       "label": "Show folder sizes",
       "hint": "Adds up what each visible folder holds. A total that cannot be complete is marked with +.",

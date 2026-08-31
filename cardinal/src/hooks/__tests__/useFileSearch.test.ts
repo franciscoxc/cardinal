@@ -63,7 +63,11 @@ const renderWithResults = async () => {
 };
 
 describe('useFileSearch', () => {
-  beforeEach(() => {});
+  beforeEach(() => {
+    // Preferences live in storage and the search hook reads them at call time, so a test that
+    // changes one leaks into every test after it unless this clears.
+    window.localStorage.clear();
+  });
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -91,6 +95,30 @@ describe('useFileSearch', () => {
     // Clearing the field is the same request, and used to cost the same three seconds.
     await waitFor(() => expect(result.current.state.results).toEqual([]));
     expect(mockedInvoke).not.toHaveBeenCalledWith('search', expect.anything());
+  });
+
+  it('asks the engine to group folders, and honours the preference when it is off', async () => {
+    mockSearchSuccess([1, 2, 3] as SlabIndex[]);
+    const { result } = await renderWithResults();
+
+    // On by default, and grouped by the engine rather than by a second call: the results are
+    // already crossing to the webview, so re-ordering them there would send the list back twice.
+    expect(mockedInvoke).toHaveBeenLastCalledWith(
+      'search',
+      expect.objectContaining({ foldersFirst: true }),
+    );
+
+    window.localStorage.setItem('cardinal.preferences.foldersFirst', 'false');
+    await act(async () => {
+      result.current.queueSearch('otra cosa', { immediate: true });
+    });
+
+    await waitFor(() =>
+      expect(mockedInvoke).toHaveBeenLastCalledWith(
+        'search',
+        expect.objectContaining({ foldersFirst: false }),
+      ),
+    );
   });
 
   it('reuses backend results array without copying', async () => {
@@ -139,6 +167,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
     });
   });
@@ -157,6 +186,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
     });
 
@@ -171,6 +201,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
       expect(result.current.state.currentDirectoryQuery).toBe('Projects');
     });
@@ -186,6 +217,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
       expect(result.current.state.currentDirectoryQuery).toBe('');
     });
@@ -218,6 +250,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
       expect(result.current.state.currentDirectoryQuery).toBe('   ');
     });
@@ -239,6 +272,7 @@ describe('useFileSearch', () => {
         options: {
           caseInsensitive: true,
         },
+        foldersFirst: true,
       });
       expect(result.current.state.currentQuery).toBe('   ');
     });

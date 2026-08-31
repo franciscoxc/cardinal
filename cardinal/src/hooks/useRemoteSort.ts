@@ -54,6 +54,8 @@ export type UseRemoteSortOptions = {
   folderSizes: boolean;
   /** Those totals are also being completed by the background disk walk. */
   deepFolderSizes: boolean;
+  /** Keep directories grouped ahead of files, whatever column is sorting. */
+  foldersFirst: boolean;
   formatDisabledTooltip: (limit: string) => string | null;
   formatSizeDisabledTooltip: (limit: string) => string | null;
 };
@@ -86,6 +88,7 @@ export const useRemoteSort = ({
   locale,
   folderSizes,
   deepFolderSizes,
+  foldersFirst,
   formatDisabledTooltip,
   formatSizeDisabledTooltip,
 }: UseRemoteSortOptions): RemoteSortControls => {
@@ -181,6 +184,7 @@ export const useRemoteSort = ({
             // Only a sort by size needs the totals, and computing them is a walk of the index.
             folderSizes: folderSizes && sortState.key === 'size',
             deepFolderSizes: queueDeepWalks,
+            foldersFirst,
           });
           if (sortRequestRef.current === requestId) {
             setSortedResults(ordered as SlabIndex[]);
@@ -193,7 +197,7 @@ export const useRemoteSort = ({
         }
       })();
     },
-    [results, sortState, canSort, folderSizes, bumpDisplayedResultsVersion],
+    [results, sortState, canSort, folderSizes, foldersFirst, bumpDisplayedResultsVersion],
   );
 
   useEffect(() => {

@@ -55,6 +55,8 @@ impl From<SearchOptionsPayload> for SearchOptions {
 pub struct SearchJob {
     pub query: SearchQuery,
     pub options: SearchOptionsPayload,
+    /// Group directories ahead of files before answering, keeping each group's own order.
+    pub folders_first: bool,
     pub cancellation_token: CancellationToken,
     pub result_tx: Sender<Result<SearchOutcome>>,
 }
@@ -366,6 +368,7 @@ pub async fn search(
     directory_query: Option<String>,
     query: Option<String>,
     options: Option<SearchOptionsPayload>,
+    folders_first: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Result<SearchResponse, String> {
     search_activity::note_search_activity();
@@ -386,6 +389,7 @@ pub async fn search(
             query,
         },
         options,
+        folders_first: folders_first.unwrap_or(false),
         cancellation_token,
         result_tx,
     }) {
@@ -483,6 +487,7 @@ pub fn get_sorted_view(
     sort: Option<SortStatePayload>,
     folder_sizes: Option<bool>,
     deep_folder_sizes: Option<bool>,
+    folders_first: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Vec<SlabIndex> {
     if results.is_empty() || sort.is_none() {
@@ -520,7 +525,7 @@ pub fn get_sorted_view(
         })
         .collect();
 
-    sort_entries(&mut entries, &sort_state);
+    sort_entries(&mut entries, &sort_state, folders_first.unwrap_or(false));
 
     entries.into_iter().map(|entry| entry.slab_index).collect()
 }

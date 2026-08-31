@@ -117,6 +117,8 @@ function App() {
     defaultIncludePaths,
     folderSizesEnabled,
     setFolderSizesEnabled,
+    foldersFirstEnabled,
+    setFoldersFirstEnabled,
     deepFolderSizesEnabled,
     setDeepFolderSizesEnabled,
     preferencesResetToken,
@@ -155,6 +157,7 @@ function App() {
     locale: i18n.language,
     folderSizes: wantFolderSizes,
     deepFolderSizes: wantDeepFolderSizes,
+    foldersFirst: foldersFirstEnabled,
     formatDisabledTooltip: (limit) => t('sorting.disabled', { limit }),
     formatSizeDisabledTooltip: (limit) => t('sorting.disabledFolderSizes', { limit }),
   });
@@ -577,6 +580,13 @@ function App() {
         deepSortThreshold={deepSortThreshold}
         defaultDeepSortThreshold={DEFAULT_DEEP_SORTABLE_RESULT_THRESHOLD}
         onDeepSortThresholdChange={setDeepSortThreshold}
+        foldersFirstEnabled={foldersFirstEnabled}
+        onFoldersFirstEnabledChange={(enabled: boolean) => {
+          setFoldersFirstEnabled(enabled);
+          // The grouping happens in the engine, so the current results have to be asked for again.
+          // The setter writes to storage synchronously, so this already sees the new value.
+          refreshSearchResults();
+        }}
         folderSizesEnabled={folderSizesEnabled}
         onFolderSizesEnabledChange={setFolderSizesEnabled}
         deepFolderSizesEnabled={deepFolderSizesEnabled}

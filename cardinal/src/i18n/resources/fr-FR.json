@@ -172,6 +172,10 @@
     "save": "Enregistrer",
     "reset": "Rétablir les paramètres par défaut",
     "close": "Fermer",
+    "foldersFirst": {
+      "label": "Dossiers en haut",
+      "hint": "Regroupe les dossiers avant les fichiers, quelle que soit la colonne de tri."
+    },
     "folderSizes": {
       "label": "Afficher la taille des dossiers",
       "hint": "Additionne le contenu de chaque dossier visible. Un total qui ne peut être complet est marqué d'un +.",

@@ -553,6 +553,14 @@ impl SearchCache {
     }
 
     /// Get the path of the node in the slab.
+    /// Whether `index` is a directory, straight from the index.
+    ///
+    /// The type is packed into the slab during the walk, so this reads memory and never touches the
+    /// disk — which is what makes grouping folders first affordable over a whole result set.
+    pub fn is_directory(&self, index: SlabIndex) -> bool {
+        self.file_nodes[index].file_type_hint() == NodeFileType::Dir
+    }
+
     pub fn node_path(&self, index: SlabIndex) -> Option<PathBuf> {
         self.file_nodes.node_path(index)
     }

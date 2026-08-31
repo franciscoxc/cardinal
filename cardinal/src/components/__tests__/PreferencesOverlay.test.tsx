@@ -24,6 +24,8 @@ const baseProps = {
   sortThreshold: 200,
   defaultSortThreshold: 100,
   onSortThresholdChange: vi.fn(),
+  foldersFirstEnabled: true,
+  onFoldersFirstEnabledChange: vi.fn(),
   deepSortThreshold: 2000,
   defaultDeepSortThreshold: 2000,
   onDeepSortThresholdChange: vi.fn(),

@@ -312,6 +312,24 @@ fn compute_folder_sizes(
         .collect()
 }
 
+/// Moves directories ahead of files, leaving the order inside each group untouched.
+///
+/// ponytail-keep: this happens here, on the results the search just produced, rather than as a
+/// second command the UI calls afterwards. The expensive part of answering a search is shipping the
+/// indices to the webview — measured at roughly 13 MB/s — so a separate grouping call would send
+/// the whole list across a second time to change nothing but its order. Reading the type is free by
+/// comparison: it comes from the slab, with no `stat`.
+fn group_directories_first(cache: &SearchCache, nodes: &mut Vec<SlabIndex>) {
+    // Stable on purpose: whatever order the engine produced still decides the order within the
+    // folders and within the files, so this composes with sorting instead of fighting it.
+    let (mut directories, files): (Vec<_>, Vec<_>) = nodes
+        .iter()
+        .copied()
+        .partition(|index| cache.is_directory(*index));
+    directories.extend(files);
+    *nodes = directories;
+}
+
 fn handle_icon_viewport_update(
     cache: &mut SearchCache,
     update: (u64, Vec<SlabIndex>),
@@ -417,11 +435,18 @@ pub fn run_background_event_loop(
                 let SearchJob {
                     query,
                     options,
+                    folders_first,
                     cancellation_token,
                     result_tx
                 } = job.expect("Search channel closed");
                 let opts = SearchOptions::from(options);
-                let payload = cache.search_query_with_options(query, opts, cancellation_token);
+                let mut payload = cache.search_query_with_options(query, opts, cancellation_token);
+                if folders_first
+                    && let Ok(outcome) = payload.as_mut()
+                    && let Some(nodes) = outcome.nodes.as_mut()
+                {
+                    group_directories_first(&cache, nodes);
+                }
                 result_tx.send(payload).expect("Failed to send result");
             }
             recv(node_info_rx) -> request => {

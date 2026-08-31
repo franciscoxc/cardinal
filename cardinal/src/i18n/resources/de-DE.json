@@ -172,6 +172,10 @@
     "save": "Speichern",
     "reset": "Standardwerte wiederherstellen",
     "close": "Schließen",
+    "foldersFirst": {
+      "label": "Ordner zuerst",
+      "hint": "Gruppiert Ordner vor Dateien, unabhängig von der sortierenden Spalte."
+    },
     "folderSizes": {
       "label": "Ordnergrößen anzeigen",
       "hint": "Summiert den Inhalt jedes sichtbaren Ordners. Eine Summe, die nicht vollständig sein kann, wird mit + markiert.",

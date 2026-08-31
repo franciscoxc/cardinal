@@ -15,6 +15,24 @@ import { useWatchRoot } from './useWatchRoot';
 
 export const FOLDER_SIZES_STORAGE_KEY = 'cardinal.preferences.folderSizes';
 export const DEEP_FOLDER_SIZES_STORAGE_KEY = 'cardinal.preferences.deepFolderSizes';
+export const FOLDERS_FIRST_STORAGE_KEY = 'cardinal.preferences.foldersFirst';
+
+/// Reads the folders-first preference straight from storage.
+///
+/// ponytail-keep: a direct read rather than a prop. The search hook runs before this one in the
+/// tree, so it cannot receive the value — and it needs it at the moment it calls the backend, not
+/// at render. The setter writes synchronously, so a refresh triggered right after a toggle already
+/// sees the new value.
+export const readFoldersFirstPreference = (): boolean => {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+  try {
+    return window.localStorage.getItem(FOLDERS_FIRST_STORAGE_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+};
 
 type WatchConfigChangePayload = {
   watchRoot: string;
@@ -35,6 +53,8 @@ type UseAppPreferencesResult = {
   trayIconEnabled: boolean;
   folderSizesEnabled: boolean;
   setFolderSizesEnabled: (enabled: boolean) => void;
+  foldersFirstEnabled: boolean;
+  setFoldersFirstEnabled: (enabled: boolean) => void;
   deepFolderSizesEnabled: boolean;
   setDeepFolderSizesEnabled: (enabled: boolean) => void;
   setTrayIconEnabled: (enabled: boolean) => void;
@@ -87,6 +107,16 @@ export function useAppPreferences({
     write: (value) => (value ? 'true' : 'false'),
     readErrorMessage: 'Failed to read deep folder size preference',
     writeErrorMessage: 'Failed to persist deep folder size preference',
+  });
+  // On by default, unlike the folder-size pair above: this only changes the order rows come back
+  // in, costs a partition of a list already in memory, and is what people expect from a file list.
+  const [foldersFirstEnabled, setFoldersFirstEnabled] = useStoredState<boolean>({
+    key: FOLDERS_FIRST_STORAGE_KEY,
+    defaultValue: true,
+    read: (raw) => raw !== 'false',
+    write: (value) => (value ? 'true' : 'false'),
+    readErrorMessage: 'Failed to read folders-first preference',
+    writeErrorMessage: 'Failed to persist folders-first preference',
   });
   const [preferencesResetToken, setPreferencesResetToken] = useState(0);
 
@@ -166,12 +196,13 @@ export function useAppPreferences({
 
   const handleResetPreferences = useCallback(() => {
     setTrayIconEnabled(false);
+    setFoldersFirstEnabled(true);
     persistThemePreference('system');
     applyThemePreference('system');
     const nextLanguage = getBrowserLanguage();
     void i18n.changeLanguage(nextLanguage);
     setPreferencesResetToken((token) => token + 1);
-  }, [i18n]);
+  }, [i18n, setFoldersFirstEnabled]);
 
   const closePreferences = useCallback(() => setIsPreferencesOpen(false), []);
 
@@ -181,6 +212,8 @@ export function useAppPreferences({
     trayIconEnabled,
     folderSizesEnabled,
     setFolderSizesEnabled,
+    foldersFirstEnabled,
+    setFoldersFirstEnabled,
     deepFolderSizesEnabled,
     setDeepFolderSizesEnabled,
     setTrayIconEnabled,

@@ -15,6 +15,8 @@ type PreferencesOverlayProps = {
   onDeepSortThresholdChange: (value: number) => void;
   trayIconEnabled: boolean;
   onTrayIconEnabledChange: (enabled: boolean) => void;
+  foldersFirstEnabled: boolean;
+  onFoldersFirstEnabledChange: (enabled: boolean) => void;
   folderSizesEnabled: boolean;
   onFolderSizesEnabledChange: (enabled: boolean) => void;
   deepFolderSizesEnabled: boolean;
@@ -47,6 +49,8 @@ export function PreferencesOverlay({
   onDeepSortThresholdChange,
   trayIconEnabled,
   onTrayIconEnabledChange,
+  foldersFirstEnabled,
+  onFoldersFirstEnabledChange,
   folderSizesEnabled,
   onFolderSizesEnabledChange,
   deepFolderSizesEnabled,
@@ -239,6 +243,24 @@ export function PreferencesOverlay({
                   checked={trayIconEnabled}
                   onChange={(event) => onTrayIconEnabledChange(event.target.checked)}
                   aria-label={t('preferences.trayIcon.label')}
+                />
+                <span className="preferences-switch__track" aria-hidden="true" />
+              </label>
+            </div>
+          </div>
+          <div className="preferences-row">
+            <div className="preferences-row__details">
+              <p className="preferences-label">{t('preferences.foldersFirst.label')}</p>
+              <p className="preferences-hint">{t('preferences.foldersFirst.hint')}</p>
+            </div>
+            <div className="preferences-control">
+              <label className="preferences-switch">
+                <input
+                  className="preferences-switch__input"
+                  type="checkbox"
+                  checked={foldersFirstEnabled}
+                  onChange={(event) => onFoldersFirstEnabledChange(event.target.checked)}
+                  aria-label={t('preferences.foldersFirst.label')}
                 />
                 <span className="preferences-switch__track" aria-hidden="true" />
               </label>

@@ -172,6 +172,10 @@
     "save": "Salvar",
     "reset": "Restaurar padrões",
     "close": "Fechar",
+    "foldersFirst": {
+      "label": "Pastas no topo",
+      "hint": "Agrupa as pastas antes dos arquivos, seja qual for a coluna que ordena."
+    },
     "folderSizes": {
       "label": "Mostrar tamanho das pastas",
       "hint": "Soma o que cada pasta visível contém. Um total que não pode ser completo é marcado com +.",

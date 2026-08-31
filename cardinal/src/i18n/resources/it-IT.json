@@ -172,6 +172,10 @@
     "save": "Salva",
     "reset": "Ripristina valori predefiniti",
     "close": "Chiudi",
+    "foldersFirst": {
+      "label": "Cartelle in cima",
+      "hint": "Raggruppa le cartelle prima dei file, qualunque sia la colonna che ordina."
+    },
     "folderSizes": {
       "label": "Mostra la dimensione delle cartelle",
       "hint": "Somma il contenuto di ogni cartella visibile. Un totale che non può essere completo è segnato con +.",

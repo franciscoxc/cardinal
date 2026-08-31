@@ -8,6 +8,7 @@ import {
   type SearchResponsePayload,
 } from '../types/ipc';
 import type { SlabIndex } from '../types/slab';
+import { readFoldersFirstPreference } from './useAppPreferences';
 
 type SearchError = string | Error | null;
 
@@ -305,6 +306,10 @@ export function useFileSearch(): UseFileSearchResult {
         options: {
           caseInsensitive: !caseSensitive,
         },
+        // Grouped by the engine rather than by a second call: the results are already crossing to
+        // the webview, and re-ordering them here would mean sending the whole list back and forth
+        // to change nothing but their order.
+        foldersFirst: readFoldersFirstPreference(),
       });
 
       if (searchVersionRef.current !== requestVersion) {

@@ -172,6 +172,10 @@
     "save": "Kaydet",
     "reset": "Varsayılanlara döndür",
     "close": "Kapat",
+    "foldersFirst": {
+      "label": "Klasörler üstte",
+      "hint": "Hangi sütuna göre sıralarsanız sıralayın, klasörleri dosyalardan önce gruplar."
+    },
     "folderSizes": {
       "label": "Klasör boyutlarını göster",
       "hint": "Görünen her klasörün içeriğini toplar. Tam olamayan bir toplam + ile işaretlenir.",

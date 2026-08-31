@@ -55,8 +55,24 @@ impl SortEntry {
     }
 }
 
-pub(crate) fn sort_entries(entries: &mut [SortEntry], sort: &SortStatePayload) {
-    entries.sort_by(|a, b| compare_entries(a, b, sort));
+pub(crate) fn sort_entries(
+    entries: &mut [SortEntry],
+    sort: &SortStatePayload,
+    folders_first: bool,
+) {
+    entries.sort_by(|a, b| {
+        // ponytail-keep: ahead of the chosen key and outside the direction flip. Grouping is not a
+        // tie-break — `type_order` was already one of those, and it never fired because names
+        // differ — and it must not invert with the arrow: folders belong on top whether the column
+        // is ascending or descending, the way Finder does it.
+        if folders_first {
+            let grouping = type_order(&a.node).cmp(&type_order(&b.node));
+            if grouping != StdOrdering::Equal {
+                return grouping;
+            }
+        }
+        compare_entries(a, b, sort)
+    });
 }
 
 fn normalize_path(path: &Path) -> String {
@@ -190,7 +206,7 @@ mod tests {
             ),
         ];
 
-        sort_entries(&mut entries, &sort_state);
+        sort_entries(&mut entries, &sort_state, false);
         let order: Vec<usize> = entries.iter().map(|entry| entry.slab_index.get()).collect();
 
         assert_eq!(
@@ -212,7 +228,7 @@ mod tests {
             entry_with_metadata(2, "/tmp/a/foo", metadata_with_type(NodeFileType::File, 5)),
         ];
 
-        sort_entries(&mut entries, &sort_state);
+        sort_entries(&mut entries, &sort_state, false);
         let order: Vec<usize> = entries.iter().map(|entry| entry.slab_index.get()).collect();
 
         assert_eq!(
@@ -220,6 +236,58 @@ mod tests {
             vec![0, 2, 1],
             "directories stay ahead when size and names match, while files fall back to path order"
         );
+    }
+
+    #[test]
+    fn folders_first_groups_ahead_of_the_key_and_survives_the_arrow() {
+        let entries = || {
+            vec![
+                entry_with_metadata(0, "/tmp/aaa.txt", metadata_with_type(NodeFileType::File, 9)),
+                entry_with_metadata(1, "/tmp/zzz", metadata_with_type(NodeFileType::Dir, 1)),
+                entry_with_metadata(2, "/tmp/bbb.txt", metadata_with_type(NodeFileType::File, 5)),
+                entry_with_metadata(3, "/tmp/mmm", metadata_with_type(NodeFileType::Dir, 1)),
+            ]
+        };
+
+        for direction in [SortDirectionPayload::Asc, SortDirectionPayload::Desc] {
+            let sort_state = SortStatePayload {
+                key: SortKeyPayload::Filename,
+                direction,
+            };
+            let mut list = entries();
+            sort_entries(&mut list, &sort_state, true);
+            let kinds: Vec<u8> = list.iter().map(|entry| type_order(&entry.node)).collect();
+            // Folders on top in both directions: grouping is not part of what the arrow flips, or
+            // sorting descending would bury them under the files.
+            assert_eq!(kinds, vec![0, 0, 1, 1], "direction {direction:?}");
+        }
+
+        // Ascending by name inside each group, which is the point of grouping rather than sorting
+        // by type: the chosen order still decides everything within the folders and the files.
+        let mut list = entries();
+        sort_entries(
+            &mut list,
+            &SortStatePayload {
+                key: SortKeyPayload::Filename,
+                direction: SortDirectionPayload::Asc,
+            },
+            true,
+        );
+        let order: Vec<usize> = list.iter().map(|entry| entry.slab_index.get()).collect();
+        assert_eq!(order, vec![3, 1, 0, 2], "mmm, zzz, then aaa.txt, bbb.txt");
+
+        // Off, the same list falls back to plain name order and the folders scatter.
+        let mut list = entries();
+        sort_entries(
+            &mut list,
+            &SortStatePayload {
+                key: SortKeyPayload::Filename,
+                direction: SortDirectionPayload::Asc,
+            },
+            false,
+        );
+        let order: Vec<usize> = list.iter().map(|entry| entry.slab_index.get()).collect();
+        assert_eq!(order, vec![0, 2, 3, 1]);
     }
 
     #[test]
@@ -251,7 +319,7 @@ mod tests {
             ),
         ];
 
-        sort_entries(&mut entries, &sort_state);
+        sort_entries(&mut entries, &sort_state, false);
         let order: Vec<usize> = entries.iter().map(|entry| entry.slab_index.get()).collect();
 
         assert_eq!(order, vec![1, 2, 0], "biggest folder first");

@@ -172,6 +172,10 @@
     "save": "Guardar",
     "reset": "Restablecer valores predeterminados",
     "close": "Cerrar",
+    "foldersFirst": {
+      "label": "Carpetas arriba",
+      "hint": "Agrupa las carpetas antes que los archivos, ordenes por la columna que ordenes."
+    },
     "folderSizes": {
       "label": "Mostrar tamaño de carpetas",
       "hint": "Suma lo que contiene cada carpeta visible. Un total que no puede ser completo se marca con +.",
