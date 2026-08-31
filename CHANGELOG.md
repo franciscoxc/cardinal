@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 — 2026-08-31
+- Stop losing filesystem changes. A single event at the watch root made the whole batch of events return early, throwing away every deletion that came bundled with it — and since nothing ever performs the rescan it asks for, those changes were lost for good. Measured on a real 5.36M-node index: every sampled entry under `DerivedData` and `.Trash` no longer existed on disk, against none under `Documents`, and the stored counter had reached 237 discarded batches. Comes straight from upstream.
+- Do not open files iCloud has not downloaded. A content search opens every candidate, and opening a placeholder is what makes macOS fetch it — so searching a synced home folder would quietly pull down every PDF, video and archive that is not on the disk. The flag is read without materialising anything.
+- Say what that skipped, and what it weighs: "42 not searched · 3.40 GB in iCloud", beside the result count. A placeholder reports its real size, so the number costs nothing to know and is what makes searching them an informed choice rather than a surprise.
+- Let the rescan button say when the index has gone stale. The app already counted the dropped batches and mentioned them in a tooltip nobody hovers; past 25 the button now turns red and pulses slowly.
+- Install an update instead of asking for a drag. "Check for Updates…" now offers to install: the app plants a small script, quits, and the script waits for it to be gone before swapping the bundle and relaunching. It verifies the signature before removing anything, so a damaged download leaves the working app in place. "Quit and do it myself" is still there.
+
 ## 0.4.0 — 2026-08-30
 - Group folders ahead of files, whichever column is sorting. A "Folders on top" switch in Preferences, on by default. The engine already knew what was a directory — the type is packed into the index during the walk, so no `stat` is involved — but it only ever used it to break ties between equal names, which in practice never happened. Grouping sits ahead of the chosen key and outside the direction flip, so folders stay on top whether a column sorts up or down, and your order still decides everything within each group.
 
