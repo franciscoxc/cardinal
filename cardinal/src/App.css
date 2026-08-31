@@ -1511,6 +1511,39 @@ button:active:not(:disabled) {
   flex-shrink: 0;
 }
 
+/* The index has gone stale enough to be worth rebuilding, and the tooltip says by how much.
+   A slow pulse rather than a blink: this is a suggestion sitting in a status bar, not an alarm,
+   and it has to be ignorable while someone is working. */
+.status-rescan-button--stale {
+  background: rgba(220, 53, 69, 0.92);
+  color: rgba(255, 255, 255, 0.98);
+  animation: status-rescan-pulse 2.4s ease-in-out infinite;
+}
+
+.status-rescan-button--stale:hover:not(:disabled),
+.status-rescan-button--stale:focus-visible:not(:disabled) {
+  background: rgba(200, 35, 51, 1);
+  color: rgba(255, 255, 255, 1);
+}
+
+@keyframes status-rescan-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(220, 53, 69, 0);
+  }
+}
+
+/* Someone who asked for less motion still gets the colour, which is what carries the message. */
+@media (prefers-reduced-motion: reduce) {
+  .status-rescan-button--stale {
+    animation: none;
+  }
+}
+
 .status-icon-button:hover:not(:disabled),
 .status-icon-button:focus-visible:not(:disabled) {
   background: rgba(248, 249, 252, 1);

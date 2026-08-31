@@ -18,6 +18,13 @@ type StatusBarProps = {
   rescanErrorCount: number;
 };
 
+/// How many dropped-event batches it takes before the rescan button starts asking for attention.
+///
+/// ponytail: a flat number, not a rate. macOS drops events in bursts, and a handful over a long
+/// session is normal wear; a count this high means whole subtrees have gone stale. Tune it if it
+/// ever cries wolf.
+const RESCAN_NAGGING_THRESHOLD = 25;
+
 const TABS: StatusTabKey[] = ['files', 'events'];
 
 const LIFECYCLE_META: Record<AppLifecycleStatus, { icon: string; tone: string }> = {
@@ -151,7 +158,11 @@ const StatusBar = ({
         <div className="status-controls">
           <button
             type="button"
-            className="status-icon-button status-rescan-button"
+            className={`status-icon-button status-rescan-button${
+              rescanErrorCount >= RESCAN_NAGGING_THRESHOLD && !rescanDisabled
+                ? ' status-rescan-button--stale'
+                : ''
+            }`}
             onClick={onRequestRescan}
             disabled={rescanDisabled}
             title={rescanTooltip}
