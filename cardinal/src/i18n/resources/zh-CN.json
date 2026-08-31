@@ -107,6 +107,8 @@
     },
     "searchLabel": "搜索：",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} 个未搜索 · iCloud 中 {{size}}",
+    "skippedCloudTitle": "这些文件未下载。打开其中一个会让 iCloud 去取，所以没有打开；搜索会把它们全部下载下来。",
     "resultsCount_other": "{{formatted}} 个结果",
     "duration": "{{value}} 毫秒",
     "resultsWithDuration": "{{results}} • {{duration}}",

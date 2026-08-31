@@ -41,5 +41,8 @@ export type SearchResponsePayload = {
   results: number[];
   highlights?: string[];
   contentTerms?: string[];
+  /** Files a content search did not open because iCloud has not downloaded them. */
+  skippedCloudFiles?: number;
+  skippedCloudBytes?: number;
   statusCode: SearchStatusCode;
 };

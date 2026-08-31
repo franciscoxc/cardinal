@@ -107,6 +107,8 @@
     },
     "searchLabel": "Ricerca:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} non esaminati · {{size}} su iCloud",
+    "skippedCloudTitle": "Questi file non sono scaricati. Cardinal non li ha aperti: aprirne uno chiede a iCloud di scaricarlo, e la ricerca li avrebbe scaricati tutti.",
     "resultsCount_one": "{{formatted}} risultato",
     "resultsCount_other": "{{formatted}} risultati",
     "duration": "{{value}} ms",

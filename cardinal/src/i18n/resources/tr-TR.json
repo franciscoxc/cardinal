@@ -107,6 +107,8 @@
     },
     "searchLabel": "Arama:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} taranmadı · iCloud'da {{size}}",
+    "skippedCloudTitle": "Bu dosyalar indirilmemiş. Cardinal onları açmadı: birini açmak iCloud'un onu getirmesini ister, arama hepsini indirirdi.",
     "resultsCount_one": "{{formatted}} sonuç",
     "resultsCount_other": "{{formatted}} sonuç",
     "duration": "{{value}} ms",

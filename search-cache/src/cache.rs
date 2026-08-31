@@ -66,17 +66,29 @@ pub struct SearchOutcome {
     /// `Some(vec![])` means completed search with zero matches.
     pub nodes: Option<Vec<SlabIndex>>,
     pub highlights: Vec<String>,
+    /// Files a `content:` search did not look inside because they are not downloaded, and what
+    /// they weigh. Reading them would have asked the cloud for them; saying so lets the user
+    /// decide with the number in front of them.
+    pub skipped_cloud_files: u64,
+    pub skipped_cloud_bytes: u64,
 }
 
 impl SearchOutcome {
     fn new(nodes: Option<Vec<SlabIndex>>, highlights: Vec<String>) -> Self {
-        Self { nodes, highlights }
+        Self {
+            nodes,
+            highlights,
+            skipped_cloud_files: 0,
+            skipped_cloud_bytes: 0,
+        }
     }
 
     fn cancelled() -> Self {
         Self {
             nodes: None,
             highlights: vec![],
+            skipped_cloud_files: 0,
+            skipped_cloud_bytes: 0,
         }
     }
 
@@ -88,10 +100,14 @@ impl SearchOutcome {
         let SearchOutcome {
             nodes: primary_nodes,
             highlights: primary_highlights,
+            skipped_cloud_files: primary_files,
+            skipped_cloud_bytes: primary_bytes,
         } = self;
         let SearchOutcome {
             nodes: secondary_nodes,
             highlights: secondary_highlights,
+            skipped_cloud_files: secondary_files,
+            skipped_cloud_bytes: secondary_bytes,
         } = other;
 
         let (Some(primary_nodes), Some(secondary_nodes)) = (primary_nodes, secondary_nodes) else {
@@ -101,7 +117,12 @@ impl SearchOutcome {
         let merged_nodes = Self::merge_preserve_order(primary_nodes, secondary_nodes);
         let merged_highlights =
             Self::merge_preserve_order(primary_highlights, secondary_highlights);
-        Self::new(Some(merged_nodes), merged_highlights)
+        let mut merged = Self::new(Some(merged_nodes), merged_highlights);
+        // Both halves of an OR may have skipped the same file, so this can overcount. A number
+        // that is too high is the safe direction: it never claims everything was searched.
+        merged.skipped_cloud_files = primary_files.saturating_add(secondary_files);
+        merged.skipped_cloud_bytes = primary_bytes.saturating_add(secondary_bytes);
+        merged
     }
 
     fn merge_preserve_order<T>(lhs: Vec<T>, rhs: Vec<T>) -> Vec<T>
@@ -345,6 +366,21 @@ impl SearchCache {
         options: SearchOptions,
         cancellation_token: CancellationToken,
     ) -> Result<SearchOutcome> {
+        crate::query::SKIPPED_CLOUD.reset();
+        let mut outcome =
+            self.search_query_with_options_inner(query, options, cancellation_token)?;
+        let (files, bytes) = crate::query::SKIPPED_CLOUD.take();
+        outcome.skipped_cloud_files = files;
+        outcome.skipped_cloud_bytes = bytes;
+        Ok(outcome)
+    }
+
+    fn search_query_with_options_inner(
+        &mut self,
+        query: SearchQuery,
+        options: SearchOptions,
+        cancellation_token: CancellationToken,
+    ) -> Result<SearchOutcome> {
         match (&query.directory_query, &query.query) {
             // Both fields are active: resolve folder scope first, then use that
             // descendant set as the base for the normal file search.
@@ -374,7 +410,12 @@ impl SearchCache {
         options: SearchOptions,
         cancellation_token: CancellationToken,
     ) -> Result<SearchOutcome> {
-        self.search_with_options_base(line, None, options, cancellation_token)
+        crate::query::SKIPPED_CLOUD.reset();
+        let mut outcome = self.search_with_options_base(line, None, options, cancellation_token)?;
+        let (files, bytes) = crate::query::SKIPPED_CLOUD.take();
+        outcome.skipped_cloud_files = files;
+        outcome.skipped_cloud_bytes = bytes;
+        Ok(outcome)
     }
 
     fn search_folder_with_options(
@@ -451,7 +492,9 @@ impl SearchCache {
             return Ok(SearchOutcome::cancelled());
         }
 
-        let SearchOutcome { nodes, highlights } = outcome;
+        let SearchOutcome {
+            nodes, highlights, ..
+        } = outcome;
         let Some(nodes) = nodes else {
             return Ok(SearchOutcome::cancelled());
         };
@@ -482,6 +525,7 @@ impl SearchCache {
         let SearchOutcome {
             nodes: scope_nodes,
             highlights: scope_highlights,
+            ..
         } = scope;
         let Some(scope_nodes) = scope_nodes else {
             return Ok(SearchOutcome::cancelled());
@@ -492,13 +536,19 @@ impl SearchCache {
         let SearchOutcome {
             nodes: primary_nodes,
             highlights: primary_highlights,
+            skipped_cloud_files,
+            skipped_cloud_bytes,
         } = primary;
         let Some(primary_nodes) = primary_nodes else {
             return Ok(SearchOutcome::cancelled());
         };
 
         let highlights = SearchOutcome::merge_preserve_order(scope_highlights, primary_highlights);
-        Ok(SearchOutcome::new(Some(primary_nodes), highlights))
+        let mut outcome = SearchOutcome::new(Some(primary_nodes), highlights);
+        // The scope half never reads file contents; only the query half can skip anything.
+        outcome.skipped_cloud_files = skipped_cloud_files;
+        outcome.skipped_cloud_bytes = skipped_cloud_bytes;
+        Ok(outcome)
     }
 
     fn search_with_query_line_transform_base(

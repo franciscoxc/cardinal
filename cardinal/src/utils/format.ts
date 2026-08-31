@@ -19,3 +19,20 @@ export function formatTimestamp(timestampSec: number | null | undefined): string
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
+/// Bytes as a person reads them, picking the unit so the number stays short.
+///
+/// `formatKB` above always says KB, which turns 3.4 GB into "3565158 KB" — a number nobody can
+/// weigh a decision against, and weighing a decision is the whole point where this is used.
+export function formatBytes(bytes: number | null | undefined): string | null {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return null;
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const decimals = unit === 0 || value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(decimals)} ${units[unit]}`;
+}

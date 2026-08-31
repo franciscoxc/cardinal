@@ -107,6 +107,8 @@
     },
     "searchLabel": "بحث:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} لم يُبحث فيها · {{size}} في iCloud",
+    "skippedCloudTitle": "هذه الملفات غير مُنزَّلة. لم يفتحها Cardinal لأن فتح أحدها يجعل iCloud يجلبه، والبحث كان سينزّلها جميعًا.",
     "resultsCount_one": "نتيجة واحدة",
     "resultsCount_other": "{{formatted}} نتائج",
     "duration": "{{value}} مللي ثانية",

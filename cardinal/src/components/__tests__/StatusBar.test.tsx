@@ -19,10 +19,25 @@ const props = (
   onTabChange: vi.fn(),
   onRequestRescan: vi.fn(),
   rescanErrorCount: 0,
+  skippedCloudFiles: 0,
+  skippedCloudBytes: 0,
   ...overrides,
 });
 
 const rescanButton = () => screen.getByRole('button', { name: 'statusBar.aria.rescan' });
+
+describe('StatusBar iCloud notice', () => {
+  it('says nothing when every candidate was searched', () => {
+    render(<StatusBar {...props()} />);
+    expect(screen.queryByText(/statusBar\.skippedCloud/)).toBeNull();
+  });
+
+  it('reports how many were skipped and what they weigh', () => {
+    // The size is what turns "some files were skipped" into a decision someone can make.
+    render(<StatusBar {...props({ skippedCloudFiles: 42, skippedCloudBytes: 3_650_722_201 })} />);
+    expect(screen.getByTitle('statusBar.skippedCloudTitle')).toBeInTheDocument();
+  });
+});
 
 describe('StatusBar rescan button', () => {
   it('stays quiet while only a few event batches have been dropped', () => {

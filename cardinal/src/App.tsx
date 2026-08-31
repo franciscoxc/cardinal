@@ -63,6 +63,8 @@ function App() {
     initialFetchCompleted,
     durationMs,
     resultCount,
+    skippedCloudFiles,
+    skippedCloudBytes,
     searchError,
     lifecycleState,
   } = state;
@@ -569,6 +571,8 @@ function App() {
           onTabChange={onTabChange}
           onRequestRescan={requestRescan}
           rescanErrorCount={rescanErrors}
+          skippedCloudFiles={skippedCloudFiles}
+          skippedCloudBytes={skippedCloudBytes}
         />
       </main>
       <PreferencesOverlay

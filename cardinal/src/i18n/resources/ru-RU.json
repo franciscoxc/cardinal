@@ -107,6 +107,8 @@
     },
     "searchLabel": "Поиск:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} не просмотрено · {{size}} в iCloud",
+    "skippedCloudTitle": "Эти файлы не загружены. Cardinal их не открывал: открытие заставляет iCloud скачать файл, и поиск загрузил бы их все.",
     "resultsCount_one": "{{formatted}} результат",
     "resultsCount_other": "{{formatted}} результатов",
     "duration": "{{value}} мс",

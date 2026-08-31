@@ -107,6 +107,8 @@
     },
     "searchLabel": "검색:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}}개 미검색 · iCloud에 {{size}}",
+    "skippedCloudTitle": "이 파일들은 내려받지 않은 상태입니다. 하나를 열면 iCloud가 가져오기 때문에 열지 않았습니다. 검색했다면 전부 내려받았을 것입니다.",
     "resultsCount_one": "{{formatted}}개 결과",
     "resultsCount_other": "{{formatted}}개 결과",
     "duration": "{{value}}ms",

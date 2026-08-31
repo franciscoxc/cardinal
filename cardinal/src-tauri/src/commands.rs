@@ -306,6 +306,10 @@ pub struct SearchResponse {
     /// `content:` terms of this query, so the UI highlights in a snippet exactly what the search
     /// looked for inside files.
     pub content_terms: Vec<String>,
+    /// Files a `content:` search did not open because iCloud has not downloaded them, and what
+    /// they weigh. Nothing is fetched to find this out — the size is in the placeholder.
+    pub skipped_cloud_files: u64,
+    pub skipped_cloud_bytes: u64,
     pub status_code: u8,
 }
 
@@ -404,22 +408,31 @@ pub async fn search(
             return Err(format!("Failed to receive search result: {e:?}"));
         }
     }
-    .map(|SearchOutcome { nodes, highlights }| {
-        let (status_code, results) = match nodes {
-            Some(list) => (SearchResponse::OK, list),
-            None => {
-                let version = cancellation_token.version();
-                info!("Search {version} was cancelled");
-                (SearchResponse::CANCELLED, vec![])
+    .map(
+        |SearchOutcome {
+             nodes,
+             highlights,
+             skipped_cloud_files,
+             skipped_cloud_bytes,
+         }| {
+            let (status_code, results) = match nodes {
+                Some(list) => (SearchResponse::OK, list),
+                None => {
+                    let version = cancellation_token.version();
+                    info!("Search {version} was cancelled");
+                    (SearchResponse::CANCELLED, vec![])
+                }
+            };
+            SearchResponse {
+                results,
+                highlights,
+                content_terms,
+                skipped_cloud_files,
+                skipped_cloud_bytes,
+                status_code,
             }
-        };
-        SearchResponse {
-            results,
-            highlights,
-            content_terms,
-            status_code,
-        }
-    })
+        },
+    )
     .map_err(|e| format!("Failed to process search result: {e:?}"))
 }
 

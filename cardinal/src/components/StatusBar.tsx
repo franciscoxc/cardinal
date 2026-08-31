@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { AppLifecycleStatus } from '../types/ipc';
 import { useTranslation } from 'react-i18next';
 import { openPreferences } from '../utils/openPreferences';
+import { formatBytes } from '../utils/format';
 
 export type StatusTabKey = 'files' | 'events';
 
@@ -16,6 +17,9 @@ type StatusBarProps = {
   onTabChange: (tab: StatusTabKey) => void;
   onRequestRescan: () => void;
   rescanErrorCount: number;
+  /** Files a content search did not look inside because iCloud has not downloaded them. */
+  skippedCloudFiles: number;
+  skippedCloudBytes: number;
 };
 
 /// How many dropped-event batches it takes before the rescan button starts asking for attention.
@@ -43,6 +47,8 @@ const StatusBar = ({
   onTabChange,
   onRequestRescan,
   rescanErrorCount,
+  skippedCloudFiles,
+  skippedCloudBytes,
 }: StatusBarProps): React.JSX.Element => {
   const { t } = useTranslation();
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +99,17 @@ const StatusBar = ({
   const searchDisplay = durationText
     ? t('statusBar.resultsWithDuration', { results: resultsText, duration: durationText })
     : resultsText;
+  // Saying nothing here would be the app quietly deciding some files do not count. The size comes
+  // from the placeholder, so it is known without fetching anything — and it is the number that
+  // makes "search them too" an informed choice rather than a surprise.
+  const skippedNotice =
+    skippedCloudFiles > 0
+      ? t('statusBar.skippedCloud', {
+          count: skippedCloudFiles,
+          formatted: skippedCloudFiles.toLocaleString(),
+          size: formatBytes(skippedCloudBytes) ?? '',
+        })
+      : null;
   const lifecycleMeta = LIFECYCLE_META[lifecycleState];
   const lifecycleLabel = t(`statusBar.lifecycle.${lifecycleState}`);
   const rescanDisabled = lifecycleState === 'Initializing';
@@ -203,6 +220,11 @@ const StatusBar = ({
           <span className="status-value" title={t('statusBar.resultsTitle')}>
             {searchDisplay}
           </span>
+          {skippedNotice ? (
+            <span className="status-skipped-cloud" title={t('statusBar.skippedCloudTitle')}>
+              {skippedNotice}
+            </span>
+          ) : null}
         </div>
       </div>
     </div>

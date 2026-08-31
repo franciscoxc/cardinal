@@ -107,6 +107,8 @@
     },
     "searchLabel": "खोज:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} नहीं खोजे गए · iCloud में {{size}}",
+    "skippedCloudTitle": "ये फ़ाइलें डाउनलोड नहीं हैं। Cardinal ने इन्हें नहीं खोला, क्योंकि एक भी खोलने पर iCloud उसे लाने लगता है — खोजने से ये सब डाउनलोड हो जातीं।",
     "resultsCount_one": "{{formatted}} परिणाम",
     "resultsCount_other": "{{formatted}} परिणाम",
     "duration": "{{value}} मि.से.",

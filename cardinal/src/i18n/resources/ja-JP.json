@@ -107,6 +107,8 @@
     },
     "searchLabel": "検索:",
     "resultsUnavailable": "—",
+    "skippedCloud": "{{formatted}} 件未検索 · iCloud に {{size}}",
+    "skippedCloudTitle": "これらはダウンロードされていません。開くと iCloud が取得を始めるため開いていません。検索すればすべてダウンロードされていたはずです。",
     "resultsCount_one": "{{formatted}} 件",
     "resultsCount_other": "{{formatted}} 件",
     "duration": "{{value}} ミリ秒",

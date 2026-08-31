@@ -25,6 +25,8 @@ type SearchState = {
   showLoadingUI: boolean;
   initialFetchCompleted: boolean;
   durationMs: number | null;
+  skippedCloudFiles: number;
+  skippedCloudBytes: number;
   resultCount: number;
   searchError: SearchError;
   lifecycleState: AppLifecycleStatus;
@@ -59,6 +61,8 @@ type SearchAction =
         count: number;
         highlightTerms: string[];
         contentTerms: string[];
+        skippedCloudFiles: number;
+        skippedCloudBytes: number;
       };
     }
   | {
@@ -84,6 +88,8 @@ const initialSearchState: SearchState = {
   showLoadingUI: false,
   initialFetchCompleted: false,
   durationMs: null,
+  skippedCloudFiles: 0,
+  skippedCloudBytes: 0,
   resultCount: 0,
   searchError: null,
   lifecycleState: 'Initializing',
@@ -137,6 +143,8 @@ function reducer(state: SearchState, action: SearchAction): SearchState {
         initialFetchCompleted: true,
         durationMs: action.payload.duration,
         resultCount: action.payload.count,
+        skippedCloudFiles: action.payload.skippedCloudFiles,
+        skippedCloudBytes: action.payload.skippedCloudBytes,
         searchError: null,
       };
     case 'SEARCH_FAILURE':
@@ -284,6 +292,8 @@ export function useFileSearch(): UseFileSearchResult {
           contentTerms: [],
           duration: 0,
           count: 0,
+          skippedCloudFiles: 0,
+          skippedCloudBytes: 0,
         },
       });
       return;
@@ -345,6 +355,8 @@ export function useFileSearch(): UseFileSearchResult {
           count: searchResults.length,
           highlightTerms,
           contentTerms,
+          skippedCloudFiles: Number(rawResults.skippedCloudFiles ?? 0),
+          skippedCloudBytes: Number(rawResults.skippedCloudBytes ?? 0),
         },
       });
     } catch (error) {

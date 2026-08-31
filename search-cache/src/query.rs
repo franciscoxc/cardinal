@@ -15,7 +15,13 @@ use query_segmentation::query_segmentation;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use regex::RegexBuilder;
 use search_cancel::CancellationToken;
-use std::{collections::BTreeSet, fs::File, io::Read, path::Path};
+use std::{
+    collections::BTreeSet,
+    fs::File,
+    io::Read,
+    path::Path,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 pub(crate) const CONTENT_BUFFER_BYTES: usize = 64 * 1024;
 
@@ -1066,6 +1072,41 @@ const SNIPPET_AFTER_BYTES: usize = 160;
 //
 // ponytail: no cancellation token; the caller hydrates visible rows only, over files the content
 // filter just read (so the pages are cached). Wire one in if snippets ever run ahead of the search.
+/// Files the running search did not look inside because they are not downloaded.
+///
+/// ponytail-keep: a static beside the filter that fills it, not a parameter. Carrying it properly
+/// would add an argument to `evaluate_expr`, `evaluate_term`, `evaluate_filter` and everything
+/// below, to reach the single place that skips. The app runs one search at a time on its
+/// background loop, and the counters are atomic anyway because the content filter is parallel.
+pub(crate) static SKIPPED_CLOUD: SkippedCloud = SkippedCloud {
+    count: AtomicU64::new(0),
+    bytes: AtomicU64::new(0),
+};
+
+pub(crate) struct SkippedCloud {
+    pub(crate) count: AtomicU64,
+    pub(crate) bytes: AtomicU64,
+}
+
+impl SkippedCloud {
+    pub(crate) fn reset(&self) {
+        self.count.store(0, Ordering::Relaxed);
+        self.bytes.store(0, Ordering::Relaxed);
+    }
+
+    pub(crate) fn take(&self) -> (u64, u64) {
+        (
+            self.count.load(Ordering::Relaxed),
+            self.bytes.load(Ordering::Relaxed),
+        )
+    }
+
+    fn note(&self, bytes: u64) {
+        self.count.fetch_add(1, Ordering::Relaxed);
+        self.bytes.fetch_add(bytes, Ordering::Relaxed);
+    }
+}
+
 /// Whether the file has no local copy, so opening it would make macOS fetch it.
 ///
 /// ponytail-keep: checked with `symlink_metadata`, which reads the flag without materialising
@@ -1080,9 +1121,16 @@ fn is_dataless(path: &Path) -> bool {
     use std::os::macos::fs::MetadataExt;
     // SF_DATALESS from <sys/stat.h>: set on a placeholder whose contents live in the cloud.
     const SF_DATALESS: u32 = 0x4000_0000;
-    std::fs::symlink_metadata(path)
-        .map(|meta| meta.st_flags() & SF_DATALESS != 0)
-        .unwrap_or(false)
+    let Ok(meta) = std::fs::symlink_metadata(path) else {
+        return false;
+    };
+    if meta.st_flags() & SF_DATALESS == 0 {
+        return false;
+    }
+    // A placeholder still reports the real size, which is what makes it possible to tell someone
+    // how much downloading these would cost before they ask for it.
+    SKIPPED_CLOUD.note(meta.len());
+    true
 }
 
 pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Option<String> {
