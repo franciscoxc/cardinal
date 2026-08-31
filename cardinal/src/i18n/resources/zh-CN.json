@@ -247,8 +247,9 @@
     },
     "mounted": {
       "title": "Cardinal {{latest}} 已就绪",
-      "body": "把新版本拖到「应用程序」文件夹。",
-      "quit": "退出 Cardinal"
+      "body": "现在安装，Cardinal 会重新启动；也可以退出后自己拖过去。",
+      "install": "安装并重启",
+      "manual": "退出，我自己来"
     },
     "downloadFailed": {
       "title": "下载失败",

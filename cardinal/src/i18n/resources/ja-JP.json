@@ -248,8 +248,9 @@
     },
     "mounted": {
       "title": "Cardinal {{latest}} の準備ができました",
-      "body": "新しいバージョンをアプリケーションフォルダにドラッグしてください。",
-      "quit": "Cardinal を終了"
+      "body": "今すぐインストールすると Cardinal が再起動します。終了して自分でドラッグすることもできます。",
+      "install": "インストールして再起動",
+      "manual": "終了して自分で行う"
     },
     "downloadFailed": {
       "title": "ダウンロードできませんでした",

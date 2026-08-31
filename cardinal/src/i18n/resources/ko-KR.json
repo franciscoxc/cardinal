@@ -248,8 +248,9 @@
     },
     "mounted": {
       "title": "Cardinal {{latest}} 준비 완료",
-      "body": "새 버전을 응용 프로그램 폴더로 끌어다 놓으세요.",
-      "quit": "Cardinal 종료"
+      "body": "지금 설치하면 Cardinal이 다시 시작됩니다. 종료하고 직접 끌어다 놓을 수도 있습니다.",
+      "install": "설치하고 다시 시작",
+      "manual": "종료하고 직접 하기"
     },
     "downloadFailed": {
       "title": "다운로드 실패",

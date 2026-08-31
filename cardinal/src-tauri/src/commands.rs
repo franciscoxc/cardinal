@@ -695,6 +695,159 @@ pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<St
     Ok(mount_point)
 }
 
+/// Plants a script that replaces this app with the one on the mounted image, then quits.
+///
+/// The script is what does the copying, because macOS will not let a running app replace itself —
+/// the process has to be gone before its bundle can be swapped, and by then there is nobody left
+/// to do the swapping. So: write it, start it detached, and quit; it waits for us to die.
+///
+/// Deliberately not a silent auto-updater. It installs what the user just agreed to download,
+/// verifies the signature before touching anything, and relaunches. No manifest, no channel.
+#[tauri::command(async)]
+pub async fn install_update(app: AppHandle, mount_point: String) -> Result<(), String> {
+    if !mount_point.starts_with("/Volumes/") {
+        error!("Refused to install from outside a mounted volume: {mount_point}");
+        return Err("unexpected install location".into());
+    }
+
+    // The bundle that is running, not a hardcoded /Applications: replacing the wrong copy would be
+    // worse than not updating at all.
+    let current = std::env::current_exe()
+        .map_err(|e| format!("cannot locate the running app: {e}"))?
+        .ancestors()
+        .nth(3)
+        .map(std::path::Path::to_path_buf)
+        .ok_or_else(|| "the running binary is not inside an app bundle".to_string())?;
+    if current.extension().and_then(|e| e.to_str()) != Some("app") {
+        return Err(format!("not an app bundle: {current:?}"));
+    }
+
+    let source = std::path::Path::new(&mount_point).join("Cardinal.app");
+    if !source.is_dir() {
+        return Err(format!("no Cardinal.app on {mount_point}"));
+    }
+
+    let script_path = std::env::temp_dir().join("cardinal-install-update.sh");
+    let script = build_install_script(&source, &current, &mount_point, std::process::id());
+    std::fs::write(&script_path, script).map_err(|e| format!("cannot write the installer: {e}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o700))
+            .map_err(|e| format!("cannot make the installer executable: {e}"))?;
+    }
+
+    Command::new("/bin/sh")
+        .arg(&script_path)
+        .spawn()
+        .map_err(|e| format!("cannot start the installer: {e}"))?;
+
+    info!("Installer started for {current:?}; quitting to let it work");
+    app.exit(0);
+    Ok(())
+}
+
+/// The installer, as text.
+///
+/// ponytail-keep: `ditto` and a rename, not `cp -R` over the old bundle. Copying over leaves behind
+/// every file the new version dropped, quietly mixing two releases. And the old copy is only
+/// removed once the new one is in place and its signature checks out, so a copy that fails halfway
+/// leaves a working app rather than none.
+fn build_install_script(
+    source: &std::path::Path,
+    target: &std::path::Path,
+    mount_point: &str,
+    pid: u32,
+) -> String {
+    // Single quotes and a doubling escape: paths come from the filesystem and can hold anything.
+    let quote = |value: &str| format!("'{}'", value.replace('\'', r"'\''"));
+    let source = quote(&source.to_string_lossy());
+    let target = quote(&target.to_string_lossy());
+    let staged = quote(&format!("{}.new", target.trim_matches('\'')));
+    let mount = quote(mount_point);
+
+    format!(
+        r#"#!/bin/sh
+set -e
+
+# Wait for the app to go. It asked for this and is quitting; if it somehow does not, give up
+# rather than replace a bundle that is still running.
+for _ in $(seq 1 100); do
+  kill -0 {pid} 2>/dev/null || break
+  sleep 0.2
+done
+if kill -0 {pid} 2>/dev/null; then
+  exit 1
+fi
+
+STAGED={staged}
+rm -rf "$STAGED"
+ditto {source} "$STAGED"
+
+# Verify before anything is destroyed: a bundle that arrived damaged must not replace a working one.
+codesign --verify --deep --strict "$STAGED" || {{ rm -rf "$STAGED"; exit 1; }}
+
+rm -rf {target}
+mv "$STAGED" {target}
+
+hdiutil detach {mount} -quiet || true
+open {target}
+rm -f "$0"
+"#
+    )
+}
+
+#[cfg(test)]
+mod install_update_tests {
+    use super::build_install_script;
+    use std::path::Path;
+
+    #[test]
+    fn the_script_never_destroys_before_the_copy_is_verified() {
+        let script = build_install_script(
+            Path::new("/Volumes/Cardinal/Cardinal.app"),
+            Path::new("/Applications/Cardinal.app"),
+            "/Volumes/Cardinal",
+            4242,
+        );
+
+        let staged = script.find("ditto").expect("stages a copy");
+        let verified = script.find("codesign --verify").expect("verifies it");
+        let destroyed = script
+            .find("rm -rf '/Applications/Cardinal.app'")
+            .expect("removes the old");
+        assert!(staged < verified, "copy before verifying");
+        assert!(
+            verified < destroyed,
+            "verify before removing the app that currently works, or a damaged download leaves \
+             the user with nothing"
+        );
+        assert!(
+            script.contains("kill -0 4242"),
+            "waits for this process to be gone"
+        );
+        assert!(
+            script.contains("open '/Applications/Cardinal.app'"),
+            "relaunches"
+        );
+        assert!(script.contains("rm -f \"$0\""), "cleans itself up");
+    }
+
+    #[test]
+    fn a_path_with_a_quote_in_it_cannot_break_out_of_the_script() {
+        // Bundles live wherever the user put them, and a name can hold anything a filesystem
+        // allows — including the quote that ends a shell string.
+        let script = build_install_script(
+            Path::new("/Volumes/Cardinal/Cardinal.app"),
+            Path::new("/Users/x/Ap'ps/Cardinal.app"),
+            "/Volumes/Cardinal",
+            1,
+        );
+        assert!(script.contains(r"'/Users/x/Ap'\''ps/Cardinal.app'"));
+        assert!(!script.contains("Ap'ps"), "the raw quote must not survive");
+    }
+}
+
 /// Quits the app the same way the menu does, flushing the cache on the way out.
 ///
 /// Exists for the update flow: the new version cannot be dragged over the running one, so the

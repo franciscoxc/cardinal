@@ -248,8 +248,9 @@
     },
     "mounted": {
       "title": "Cardinal {{latest}} ist bereit",
-      "body": "Ziehen Sie die neue Version in den Ordner \"Programme\".",
-      "quit": "Cardinal beenden"
+      "body": "Jetzt installieren und Cardinal startet neu, oder beenden und selbst hinüberziehen.",
+      "install": "Installieren und neu starten",
+      "manual": "Beenden und selbst machen"
     },
     "downloadFailed": {
       "title": "Download fehlgeschlagen",

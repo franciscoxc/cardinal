@@ -248,8 +248,9 @@
     },
     "mounted": {
       "title": "Cardinal {{latest}} hazır",
-      "body": "Yeni sürümü Uygulamalar klasörüne sürükleyin.",
-      "quit": "Cardinal'ı kapat"
+      "body": "Şimdi kurun, Cardinal yeniden başlasın; ya da kapatıp kendiniz sürükleyin.",
+      "install": "Kur ve yeniden başlat",
+      "manual": "Kapat, kendim yapayım"
     },
     "downloadFailed": {
       "title": "İndirilemedi",

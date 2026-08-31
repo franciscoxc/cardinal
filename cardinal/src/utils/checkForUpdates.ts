@@ -139,14 +139,20 @@ export async function checkForUpdates(): Promise<void> {
     }
 
     try {
-      await invoke('download_and_mount_update', { url: dmg });
-      // ponytail-keep: quitting is part of the instruction, not a courtesy. macOS will not let the
-      // new app replace the one that is running, so telling someone to drag it while Cardinal is
-      // open is telling them to fail. The button says what it does rather than "OK".
-      await message(t('updates.mounted.body'), {
+      const mountPoint = await invoke<string>('download_and_mount_update', { url: dmg });
+      // ponytail-keep: quitting is part of installing, not a courtesy. macOS will not let the new
+      // app replace the one that is running, so the installer runs after this process is gone —
+      // the button says what it does rather than "OK".
+      const install = await ask(t('updates.mounted.body'), {
         title: t('updates.mounted.title', { latest }),
-        okLabel: t('updates.mounted.quit'),
+        okLabel: t('updates.mounted.install'),
+        cancelLabel: t('updates.mounted.manual'),
       });
+      if (install) {
+        await invoke('install_update', { mountPoint });
+        return;
+      }
+      // Chose to do it by hand: the volume is already open, so leave it and get out of the way.
       await invoke('quit_app');
     } catch (downloadError) {
       console.error('Update download failed', downloadError);
