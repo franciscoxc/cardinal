@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 — 2026-09-01
+- Put the downloaded disk image in the Trash once the update is installed, instead of leaving it in Downloads forever. The Trash rather than `rm`: if an update turns out badly, that file is the one thing that gets you back to the version before it. It is moved after the volume is unmounted, since moving the file backing a mounted image is how you corrupt it.
+- Drop two functions nothing called: `SearchCache::rescan`, superseded by `rescan_with_walk_data`, and `scan_path_nonrecursive`, which had been silenced with `#[allow(dead_code)]` rather than removed.
+
 ## 0.5.0 — 2026-08-31
 - Stop losing filesystem changes. A single event at the watch root made the whole batch of events return early, throwing away every deletion that came bundled with it — and since nothing ever performs the rescan it asks for, those changes were lost for good. Measured on a real 5.36M-node index: every sampled entry under `DerivedData` and `.Trash` no longer existed on disk, against none under `Documents`, and the stored counter had reached 237 discarded batches. Comes straight from upstream.
 - Do not open files iCloud has not downloaded. A content search opens every candidate, and opening a placeholder is what makes macOS fetch it — so searching a synced home folder would quietly pull down every PDF, video and archive that is not on the disk. The flag is read without materialising anything.

@@ -900,19 +900,6 @@ impl SearchCache {
         })
     }
 
-    // `Self::scan_path_nonrecursive`function returns index of the constructed node.
-    // - If path is not under the watch root, None is returned.
-    // - Procedure contains metadata fetching, if metadata fetching failed, None is returned.
-    #[allow(dead_code)]
-    fn scan_path_nonrecursive(&mut self, path: &Path) -> Option<SlabIndex> {
-        // Ensure path is under the watch root
-        if path.symlink_metadata().err().map(|e| e.kind()) == Some(ErrorKind::NotFound) {
-            self.remove_node_path(path);
-            return None;
-        };
-        Some(self.create_node_chain(path))
-    }
-
     pub fn walk_data<'p>(
         &self,
         phantom1: &'p mut PathBuf,
@@ -939,24 +926,6 @@ impl SearchCache {
         };
         *self = new_cache;
         Some(())
-    }
-
-    pub fn rescan(&mut self) {
-        // Remove all memory consuming cache early for memory consumption in Self::walk_fs_new.
-        let Some(new_cache) = Self::walk_fs_with_walk_data(
-            &WalkData::new(
-                self.file_nodes.path(),
-                self.file_nodes.ignore_paths(),
-                self.file_nodes.include_paths(),
-                false,
-                || self.stop.load(Ordering::Relaxed),
-            ),
-            self.stop,
-        ) else {
-            info!("Rescan cancelled.");
-            return;
-        };
-        *self = new_cache;
     }
 
     /// Removes a node and its children recursively by index.

@@ -611,13 +611,27 @@ pub async fn open_path(path: String) {
 /// ever supposed to come from this repository's own release assets, so require exactly that.
 const RELEASE_ASSET_PREFIX: &str = "https://github.com/franciscoxc/cardinal/releases/download/";
 
+/// What a downloaded update left on disk: where it is mounted, and the file backing it.
+///
+/// The disk image is carried along because the installer has to put it in the Trash once it is
+/// done, and by then the only thing that still knows where it came from is this.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MountedUpdate {
+    mount_point: String,
+    disk_image: String,
+}
+
 /// Downloads a release asset and mounts it, so updating is one click from the update dialog.
 ///
 /// Deliberately not an auto-updater: no signature manifest, no update channel, no silent replace.
-/// It fetches the disk image the user just agreed to and opens it, leaving the drag to Applications
-/// — and the decision — to them.
+/// It fetches the disk image the user just agreed to and opens it; installing it is a separate
+/// step the user asks for from the dialog that follows.
 #[tauri::command(async)]
-pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<String, String> {
+pub async fn download_and_mount_update(
+    app: AppHandle,
+    url: String,
+) -> Result<MountedUpdate, String> {
     if !url.starts_with(RELEASE_ASSET_PREFIX) {
         error!("Refused to download an asset from outside the release URL: {url}");
         return Err("unexpected download location".into());
@@ -692,7 +706,10 @@ pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<St
     }
 
     info!("Update downloaded to {target:?} and mounted at {mount_point}");
-    Ok(mount_point)
+    Ok(MountedUpdate {
+        mount_point,
+        disk_image: target.to_string_lossy().into_owned(),
+    })
 }
 
 /// Plants a script that replaces this app with the one on the mounted image, then quits.
@@ -704,11 +721,39 @@ pub async fn download_and_mount_update(app: AppHandle, url: String) -> Result<St
 /// Deliberately not a silent auto-updater. It installs what the user just agreed to download,
 /// verifies the signature before touching anything, and relaunches. No manifest, no channel.
 #[tauri::command(async)]
-pub async fn install_update(app: AppHandle, mount_point: String) -> Result<(), String> {
+pub async fn install_update(
+    app: AppHandle,
+    mount_point: String,
+    disk_image: String,
+) -> Result<(), String> {
     if !mount_point.starts_with("/Volumes/") {
         error!("Refused to install from outside a mounted volume: {mount_point}");
         return Err("unexpected install location".into());
     }
+
+    // ponytail-keep: the path arrives back through the frontend, so it is checked again rather
+    // than trusted. The script built below moves whatever it is given, and the same prefix rule
+    // that guards the download has to guard the deletion — otherwise a caller that forgets could
+    // have the installer trash an arbitrary file.
+    let downloads = app
+        .path()
+        .download_dir()
+        .map_err(|e| format!("no Downloads folder: {e}"))?;
+    let image = std::path::PathBuf::from(&disk_image);
+    if !image.starts_with(&downloads) || image.extension().and_then(|e| e.to_str()) != Some("dmg") {
+        error!("Refused to trash a file outside Downloads: {disk_image}");
+        return Err("unexpected disk image location".into());
+    }
+    let trashed = app
+        .path()
+        .home_dir()
+        .map_err(|e| format!("no home folder: {e}"))?
+        .join(".Trash")
+        .join(
+            image
+                .file_name()
+                .ok_or_else(|| "unnamed disk image".to_string())?,
+        );
 
     // The bundle that is running, not a hardcoded /Applications: replacing the wrong copy would be
     // worse than not updating at all.
@@ -728,7 +773,14 @@ pub async fn install_update(app: AppHandle, mount_point: String) -> Result<(), S
     }
 
     let script_path = std::env::temp_dir().join("cardinal-install-update.sh");
-    let script = build_install_script(&source, &current, &mount_point, std::process::id());
+    let script = build_install_script(
+        &source,
+        &current,
+        &mount_point,
+        &image,
+        &trashed,
+        std::process::id(),
+    );
     std::fs::write(&script_path, script).map_err(|e| format!("cannot write the installer: {e}"))?;
     #[cfg(unix)]
     {
@@ -757,6 +809,8 @@ fn build_install_script(
     source: &std::path::Path,
     target: &std::path::Path,
     mount_point: &str,
+    disk_image: &std::path::Path,
+    trashed: &std::path::Path,
     pid: u32,
 ) -> String {
     // Single quotes and a doubling escape: paths come from the filesystem and can hold anything.
@@ -765,6 +819,8 @@ fn build_install_script(
     let target = quote(&target.to_string_lossy());
     let staged = quote(&format!("{}.new", target.trim_matches('\'')));
     let mount = quote(mount_point);
+    let disk_image = quote(&disk_image.to_string_lossy());
+    let trashed = quote(&trashed.to_string_lossy());
 
     format!(
         r#"#!/bin/sh
@@ -791,6 +847,17 @@ rm -rf {target}
 mv "$STAGED" {target}
 
 hdiutil detach {mount} -quiet || true
+
+# The disk image goes to the Trash, not to rm: if this update turns out badly, the installer for it
+# is the one thing that gets you back, and it was just deleted. Detached first — moving the file
+# out from under a mounted volume is asking for it. Failure here is not worth aborting an update
+# that already succeeded, so it is swallowed.
+TRASHED={trashed}
+if [ -e "$TRASHED" ]; then
+  TRASHED="$TRASHED.$$"
+fi
+mv {disk_image} "$TRASHED" 2>/dev/null || true
+
 open {target}
 rm -f "$0"
 "#
@@ -808,6 +875,8 @@ mod install_update_tests {
             Path::new("/Volumes/Cardinal/Cardinal.app"),
             Path::new("/Applications/Cardinal.app"),
             "/Volumes/Cardinal",
+            Path::new("/Users/x/Downloads/Cardinal_0.5.0_aarch64.dmg"),
+            Path::new("/Users/x/.Trash/Cardinal_0.5.0_aarch64.dmg"),
             4242,
         );
 
@@ -841,10 +910,47 @@ mod install_update_tests {
             Path::new("/Volumes/Cardinal/Cardinal.app"),
             Path::new("/Users/x/Ap'ps/Cardinal.app"),
             "/Volumes/Cardinal",
+            Path::new("/Users/x/Downloads/Card'inal.dmg"),
+            Path::new("/Users/x/.Trash/Card'inal.dmg"),
             1,
         );
         assert!(script.contains(r"'/Users/x/Ap'\''ps/Cardinal.app'"));
         assert!(!script.contains("Ap'ps"), "the raw quote must not survive");
+        assert!(script.contains(r"'/Users/x/Downloads/Card'\''inal.dmg'"));
+        assert!(
+            !script.contains("Card'inal"),
+            "the disk image is quoted too"
+        );
+    }
+
+    #[test]
+    fn the_disk_image_is_trashed_rather_than_deleted_and_only_after_it_is_unmounted() {
+        let script = build_install_script(
+            Path::new("/Volumes/Cardinal/Cardinal.app"),
+            Path::new("/Applications/Cardinal.app"),
+            "/Volumes/Cardinal",
+            Path::new("/Users/x/Downloads/Cardinal_0.5.0_aarch64.dmg"),
+            Path::new("/Users/x/.Trash/Cardinal_0.5.0_aarch64.dmg"),
+            7,
+        );
+
+        let detached = script.find("hdiutil detach").expect("unmounts");
+        let moved = script
+            .find("mv '/Users/x/Downloads/Cardinal_0.5.0_aarch64.dmg'")
+            .expect("moves the disk image");
+        assert!(
+            detached < moved,
+            "the image is still mounted until then, and moving its backing file first is asking \
+             for a corrupt volume"
+        );
+        assert!(
+            script.contains("'/Users/x/.Trash/Cardinal_0.5.0_aarch64.dmg'"),
+            "into the Trash, where it can be recovered"
+        );
+        assert!(
+            !script.contains("rm -f '/Users/x/Downloads"),
+            "never deleted outright: a bad update leaves the user needing this exact file"
+        );
     }
 }
 

@@ -139,7 +139,10 @@ export async function checkForUpdates(): Promise<void> {
     }
 
     try {
-      const mountPoint = await invoke<string>('download_and_mount_update', { url: dmg });
+      const { mountPoint, diskImage } = await invoke<{ mountPoint: string; diskImage: string }>(
+        'download_and_mount_update',
+        { url: dmg },
+      );
       // ponytail-keep: quitting is part of installing, not a courtesy. macOS will not let the new
       // app replace the one that is running, so the installer runs after this process is gone —
       // the button says what it does rather than "OK".
@@ -149,7 +152,7 @@ export async function checkForUpdates(): Promise<void> {
         cancelLabel: t('updates.mounted.manual'),
       });
       if (install) {
-        await invoke('install_update', { mountPoint });
+        await invoke('install_update', { mountPoint, diskImage });
         return;
       }
       // Chose to do it by hand: the volume is already open, so leave it and get out of the way.

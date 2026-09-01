@@ -3,7 +3,7 @@
   <h1>Cardinal</h1>
   <p>Fastest and most accurate file search app for macOS — with the search brought up to the surface.</p>
   <p>
-    <a href="https://github.com/franciscoxc/cardinal/releases/download/v0.5.0/Cardinal_0.5.0_aarch64.dmg"><img src="https://img.shields.io/badge/Download-Cardinal%200.5.0%20for%20macOS-D62828?style=for-the-badge&logo=apple&logoColor=white" alt="Download Cardinal 0.5.0 for macOS"></a>
+    <a href="https://github.com/franciscoxc/cardinal/releases/download/v0.5.1/Cardinal_0.5.1_aarch64.dmg"><img src="https://img.shields.io/badge/Download-Cardinal%200.5.1%20for%20macOS-D62828?style=for-the-badge&logo=apple&logoColor=white" alt="Download Cardinal 0.5.1 for macOS"></a>
   </p>
   <p>
     Signed and notarized · Apple silicon · macOS 12+
@@ -13,18 +13,29 @@
 
 ---
 
-> This is a fork of [Cardinal](https://github.com/cardisoft/cardinal) by [cardisoft](https://github.com/cardisoft) — the best Everything alternative for macOS. The engine is theirs and it is excellent; what this fork changes is how much of it you can reach without knowing the syntax first.
+> This is a fork of [Cardinal](https://github.com/cardisoft/cardinal) by [cardisoft](https://github.com/cardisoft) — the best Everything alternative for macOS. The engine is theirs and it is excellent; what this fork changes is how much of it you can reach without knowing the syntax first — and a few bugs found while getting there, reported back upstream.
 
 ## What this fork adds
 
 - **A file-type dropdown** beside the search bar: Image, Video, Audio, Document, Email, Archive, Code, App, Folder. Picking one writes the filter into the query — `type:image` — instead of hiding it, so the bar stays the single source of truth and the syntax is there to be learned.
 - **A "Contains" field** for searching inside files, next to the one for names. It writes `content:"…"` the same way.
 - **A context column** showing the matching text from inside each file, with the searched term highlighted, so a content search tells you *why* every result is there.
-- **`type:email`** — `.eml`, `.emlx`, `.emlxpart`, `.msg`, `.mbox`. Apple Mail's formats are the ones nobody finds by name.
+- **`type:email`** — `.eml`, `.emlx`, `.emlxpart`, `.msg`, `.mbox`, plus Outlook's own: the one-file-per-message `.olk15Message` generation and the `.olm`, `.pst`, `.ost` and `.nst` mailboxes. Mail is what nobody finds by name.
+- **Folder sizes in the Size column**, which was blank for folders. Summed from the index in memory rather than by walking the disk, and only for the rows on screen; a second preference completes the total by walking the directories the index leaves out. Off by default.
+- **Folders grouped ahead of files**, whichever column is sorting and in both directions, with your order still deciding within each group. On by default.
 - **A folder picker.** The folder icon opens one, instead of folding the field away.
-- **Columns you can reorder** by dragging their titles, with the snippet next to the name by default.
+- **Columns you can reorder and hide**, the way Finder does, with the snippet next to the name by default. The layout is remembered.
 - **Plain wording.** "Folder scope" is now "Search in… (whole disk)", in all 15 languages.
+- **An updater that installs.** "Check for Updates…" lists what changed and, on one click, downloads the disk image and replaces the app with it: a small script waits for the app to quit, verifies the new bundle's signature before removing anything, swaps it and relaunches. Doing it by hand is still offered. No update channel and no silent replace — the app makes no network request unless asked.
 - **An accessible name on the search input**, contributed upstream by [@dkattan](https://github.com/dkattan) ([#220](https://github.com/cardisoft/cardinal/pull/220)).
+
+## What this fork fixes
+
+Three upstream bugs, each reported back with the measurements that found it:
+
+- **Deletions stop being lost.** One filesystem event at the watch root made the whole batch return early, throwing away every other change bundled with it — and nothing ever performed the rescan it asked for, so those changes were gone for good. Measured on a real 5.36M-node index: 237 discarded batches, and every sampled entry under `DerivedData` and `.Trash` no longer existed on disk while the index still offered it. ([#229](https://github.com/cardisoft/cardinal/issues/229))
+- **A content search stops downloading your iCloud Drive.** Reading a file is what makes macOS materialise a placeholder, so searching a synced home folder quietly pulled down every PDF, video and archive that was not on the disk. The flag is now read without materialising anything, and the app says how many files it skipped and what they weigh. ([#231](https://github.com/cardisoft/cardinal/issues/231))
+- **`content:` stops costing 60× more depending on word order.** It shared a filter priority with `type:`, so `content:invoice type:email` opened and read every file on the disk while `type:email content:invoice` read only the mail. It now always runs last, on the smallest candidate set. ([#230](https://github.com/cardisoft/cardinal/issues/230))
 
 Everything below is the original project's documentation, unchanged.
 
@@ -36,7 +47,7 @@ Everything below is the original project's documentation, unchanged.
 
 ### Download
 
-[**Download Cardinal 0.5.0 for macOS**](https://github.com/franciscoxc/cardinal/releases/download/v0.5.0/Cardinal_0.5.0_aarch64.dmg) — signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper warnings.
+[**Download Cardinal 0.5.1 for macOS**](https://github.com/franciscoxc/cardinal/releases/download/v0.5.1/Cardinal_0.5.1_aarch64.dmg) — signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper warnings.
 
 Every build lives in [Releases](https://github.com/franciscoxc/cardinal/releases). Open the DMG, drag Cardinal to Applications, and grant Full Disk Access when macOS asks — Cardinal needs it to index and watch your files.
 
