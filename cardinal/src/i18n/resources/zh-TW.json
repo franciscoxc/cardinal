@@ -254,6 +254,10 @@
     "downloadFailed": {
       "title": "下載失敗",
       "body": "無法下載更新。你可以從發布頁面取得。"
+    },
+    "installFailed": {
+      "title": "安裝失敗",
+      "body": "Cardinal 無法在它所在的檔案夾裡取代自己。新版本已在 Finder 中打開：請結束 Cardinal，把它拖到「應用程式」。"
     }
   }
 }

@@ -3,9 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { ask, message } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import i18n from '../i18n/config';
+import { formatBytes } from './format';
 
 const LATEST_RELEASE_API = 'https://api.github.com/repos/franciscoxc/cardinal/releases/latest';
 export const RELEASES_PAGE = 'https://github.com/franciscoxc/cardinal/releases/latest';
+/** Every release with its notes, for the Help menu: a place to read, not a check to run. */
+export const ALL_RELEASES_PAGE = 'https://github.com/franciscoxc/cardinal/releases';
 
 /** How much of the release notes the dialog will show before pointing at the full page. */
 const NOTES_BUDGET = 1200;
@@ -39,8 +42,8 @@ export const plainNotes = (body: string): string => {
   return `${text.slice(0, cut > 0 ? cut : NOTES_BUDGET).trim()}\n…`;
 };
 
-/** The macOS disk image among a release's assets, if it published one. */
-export const diskImageUrl = (release: unknown): string | null => {
+/** The macOS disk image among a release's assets, if it published one, and what it weighs. */
+export const releaseDiskImage = (release: unknown): { url: string; size: number | null } | null => {
   if (typeof release !== 'object' || release === null || !('assets' in release)) {
     return null;
   }
@@ -49,12 +52,15 @@ export const diskImageUrl = (release: unknown): string | null => {
     return null;
   }
   for (const asset of assets) {
-    const url =
-      typeof asset === 'object' && asset !== null && 'browser_download_url' in asset
-        ? String((asset as { browser_download_url: unknown }).browser_download_url)
-        : '';
-    if (url.endsWith('.dmg')) {
-      return url;
+    if (typeof asset !== 'object' || asset === null) {
+      continue;
+    }
+    const { browser_download_url: url, size } = asset as {
+      browser_download_url?: unknown;
+      size?: unknown;
+    };
+    if (typeof url === 'string' && url.endsWith('.dmg')) {
+      return { url, size: typeof size === 'number' && size > 0 ? size : null };
     }
   }
   return null;
@@ -82,11 +88,29 @@ export const compareVersions = (a: string, b: string): number => {
   return 0;
 };
 
+// ponytail-keep: one check at a time. Between agreeing to the download and the dialog that
+// follows it nothing is on screen, and the menu is still there to be clicked — a second run
+// fetched the same disk image over the one the first was still writing, then mounted whichever
+// state it was in.
+let checking = false;
+
 /**
  * Asks GitHub for the latest release and tells the user where they stand. Only ever runs from the
  * menu: the app makes no network requests on its own, and that should stay true.
  */
 export async function checkForUpdates(): Promise<void> {
+  if (checking) {
+    return;
+  }
+  checking = true;
+  try {
+    await runUpdateCheck();
+  } finally {
+    checking = false;
+  }
+}
+
+async function runUpdateCheck(): Promise<void> {
   const t = i18n.t.bind(i18n);
   let current = '';
 
@@ -120,12 +144,19 @@ export async function checkForUpdates(): Promise<void> {
       typeof release === 'object' && release !== null && 'body' in release
         ? plainNotes(String((release as { body: unknown }).body ?? ''))
         : '';
-    const dmg = diskImageUrl(release);
+    const dmg = releaseDiskImage(release);
+    // The dialog goes away on the click and nothing takes its place until the download is done,
+    // so the button says how much it is about to fetch. A plain dialog cannot show progress; it
+    // can at least set the expectation.
+    const weight = formatBytes(dmg?.size);
+    const downloadLabel = weight
+      ? `${t('updates.available.download')} (${weight})`
+      : t('updates.available.download');
 
     const headline = t('updates.available.body', { latest, current });
     const wantsDownload = await ask(notes ? `${headline}\n\n${notes}` : headline, {
       title: t('updates.available.title'),
-      okLabel: dmg ? t('updates.available.download') : t('updates.failed.open'),
+      okLabel: dmg ? downloadLabel : t('updates.failed.open'),
       cancelLabel: t('updates.available.later'),
     });
     if (!wantsDownload) {
@@ -141,7 +172,7 @@ export async function checkForUpdates(): Promise<void> {
     try {
       const { mountPoint, diskImage } = await invoke<{ mountPoint: string; diskImage: string }>(
         'download_and_mount_update',
-        { url: dmg },
+        { url: dmg.url },
       );
       // ponytail-keep: quitting is part of installing, not a courtesy. macOS will not let the new
       // app replace the one that is running, so the installer runs after this process is gone —
@@ -152,10 +183,28 @@ export async function checkForUpdates(): Promise<void> {
         cancelLabel: t('updates.mounted.manual'),
       });
       if (install) {
-        await invoke('install_update', { mountPoint, diskImage });
-        return;
+        try {
+          await invoke('install_update', { mountPoint, diskImage });
+          return;
+        } catch (installError) {
+          console.error('Update install failed', installError);
+          // ponytail-keep: its own dialog, with the way out that still works. The app refuses to
+          // install where it cannot write — /Applications on an account that is not an
+          // administrator — and that used to fall through to the message below, which says the
+          // download failed and points at the web page. The download is fine: it is mounted, its
+          // window is open, and Finder can ask for the password this app cannot.
+          const wantsManual = await ask(t('updates.installFailed.body'), {
+            title: t('updates.installFailed.title'),
+            kind: 'warning',
+            okLabel: t('updates.mounted.manual'),
+            cancelLabel: t('updates.available.later'),
+          });
+          if (!wantsManual) {
+            return;
+          }
+        }
       }
-      // Chose to do it by hand: the volume is already open, so leave it and get out of the way.
+      // Doing it by hand: the volume is already open, so leave it and get out of the way.
       await invoke('quit_app');
     } catch (downloadError) {
       console.error('Update download failed', downloadError);

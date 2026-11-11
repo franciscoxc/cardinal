@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "Download fehlgeschlagen",
       "body": "Cardinal konnte das Update nicht laden. Sie können es stattdessen von der Releases-Seite holen."
+    },
+    "installFailed": {
+      "title": "Installation fehlgeschlagen",
+      "body": "Cardinal kann sich in dem Ordner, in dem es installiert ist, nicht selbst ersetzen. Die neue Version ist im Finder geöffnet: Cardinal beenden und sie in „Programme“ ziehen."
     }
   }
 }

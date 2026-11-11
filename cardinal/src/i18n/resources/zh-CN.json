@@ -254,6 +254,10 @@
     "downloadFailed": {
       "title": "下载失败",
       "body": "无法下载更新。你可以从发布页面获取。"
+    },
+    "installFailed": {
+      "title": "安装失败",
+      "body": "Cardinal 无法在它所在的文件夹里替换自己。新版本已在访达中打开：请退出 Cardinal，把它拖到“应用程序”。"
     }
   }
 }

@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "İndirilemedi",
       "body": "Cardinal güncellemeyi indiremedi. Sürümler sayfasından alabilirsiniz."
+    },
+    "installFailed": {
+      "title": "Kurulamadı",
+      "body": "Cardinal, kurulu olduğu klasörde kendini değiştiremiyor. Yeni sürüm Finder'da açık: Cardinal'i kapatıp Uygulamalar'a sürükleyin."
     }
   }
 }

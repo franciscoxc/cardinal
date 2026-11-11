@@ -672,6 +672,16 @@ pub async fn open_path(path: String) {
 /// ever supposed to come from this repository's own release assets, so require exactly that.
 const RELEASE_ASSET_PREFIX: &str = "https://github.com/franciscoxc/cardinal/releases/download/";
 
+/// The Developer ID team every release of this fork is signed by.
+///
+/// ponytail-keep: the installer requires this signer, not just a signature. `codesign --verify`
+/// on its own answers "is this bundle intact", which an ad-hoc signature made by anyone passes;
+/// and a file fetched with curl carries no quarantine flag, so Gatekeeper never looks at it
+/// either. The prefix above trusts whoever can publish a release on that repository; this trusts
+/// only the key. A fork that signs with its own identity changes both — a test holds this one
+/// against `signingIdentity` in tauri.conf.json so the two cannot drift apart.
+const SIGNING_TEAM_ID: &str = "993439K8XB";
+
 /// What a downloaded update left on disk: where it is mounted, and the file backing it.
 ///
 /// The disk image is carried along because the installer has to put it in the Trash once it is
@@ -722,6 +732,15 @@ pub async fn download_and_mount_update(
             "--proto",
             "=https",
             "--tlsv1.2",
+            // Nothing is on screen while this runs, so a connection that stalls would look exactly
+            // like the app ignoring the click, for ever. Bounded by "no data", not by total time:
+            // a slow link that keeps moving is still a download.
+            "--connect-timeout",
+            "20",
+            "--speed-limit",
+            "1024",
+            "--speed-time",
+            "30",
             "--output",
         ])
         .arg(&target)
@@ -833,6 +852,19 @@ pub async fn install_update(
         return Err(format!("no Cardinal.app on {mount_point}"));
     }
 
+    // ponytail-keep: checked here, before quitting, because afterwards nobody is left to say it
+    // failed. The swap happens once this process is gone: in a folder it could not write to —
+    // /Applications on an account that is not an administrator, or an app run straight from a
+    // read-only image — the script died on its first step and the app simply never came back.
+    // Refusing now leaves the dialog that explains, and the disk image open for the drag.
+    let folder = current
+        .parent()
+        .ok_or_else(|| "the app bundle has no parent folder".to_string())?;
+    if !can_replace_in(folder) {
+        error!("Cannot replace the app in {folder:?}: not writable");
+        return Err(format!("cannot write to {folder:?}"));
+    }
+
     let script_path = std::env::temp_dir().join("cardinal-install-update.sh");
     let script = build_install_script(
         &source,
@@ -860,12 +892,34 @@ pub async fn install_update(
     Ok(())
 }
 
+/// Whether a bundle can be swapped inside `folder`.
+///
+/// Asked by doing it: the installer renames inside this folder, and a rename needs exactly what
+/// creating an entry needs. Permission bits alone would miss ACLs and read-only volumes.
+fn can_replace_in(folder: &std::path::Path) -> bool {
+    let probe = folder.join(format!(".cardinal-update-{}", std::process::id()));
+    match std::fs::create_dir(&probe) {
+        Ok(()) => {
+            let _ = std::fs::remove_dir(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
 /// The installer, as text.
 ///
-/// ponytail-keep: `ditto` and a rename, not `cp -R` over the old bundle. Copying over leaves behind
-/// every file the new version dropped, quietly mixing two releases. And the old copy is only
-/// removed once the new one is in place and its signature checks out, so a copy that fails halfway
-/// leaves a working app rather than none.
+/// ponytail-keep: `ditto` into a staging copy and two renames, not `cp -R` over the old bundle and
+/// not `rm -rf` of it either. Copying over leaves behind every file the new version dropped,
+/// quietly mixing two releases. Deleting the old bundle before the new one is in place is worse:
+/// an `rm -rf` that fails half-way — a bundle installed by another account is enough — leaves no
+/// app at all. A rename needs nothing from the bundle's contents, cannot stop in the middle, and
+/// can be undone, so at every step there is a whole app at the path the user launches from.
+///
+/// ponytail: when it gives up, the old app comes back without saying why. The common cause, a
+/// folder that cannot be written, is caught before quitting, where a dialog can explain; what is
+/// left is a full disk or a download that fails verification. Relaunch with a flag and have the
+/// app show `updates.installFailed` if that silence ever leaves someone guessing.
 fn build_install_script(
     source: &std::path::Path,
     target: &std::path::Path,
@@ -877,15 +931,20 @@ fn build_install_script(
     // Single quotes and a doubling escape: paths come from the filesystem and can hold anything.
     let quote = |value: &str| format!("'{}'", value.replace('\'', r"'\''"));
     let source = quote(&source.to_string_lossy());
+    let staged = quote(&format!("{}.new", target.to_string_lossy()));
+    let previous = quote(&format!("{}.old", target.to_string_lossy()));
     let target = quote(&target.to_string_lossy());
-    let staged = quote(&format!("{}.new", target.trim_matches('\'')));
     let mount = quote(mount_point);
     let disk_image = quote(&disk_image.to_string_lossy());
     let trashed = quote(&trashed.to_string_lossy());
+    // Apple's root, and a leaf certificate issued to this team: anybody else's signature — or an
+    // ad-hoc one, which has no certificate at all — does not satisfy it.
+    let signed_by_us = quote(&format!(
+        r#"anchor apple generic and certificate leaf[subject.OU] = "{SIGNING_TEAM_ID}""#
+    ));
 
     format!(
         r#"#!/bin/sh
-set -e
 
 # Wait for the app to go. It asked for this and is quitting; if it somehow does not, give up
 # rather than replace a bundle that is still running.
@@ -898,14 +957,35 @@ if kill -0 {pid} 2>/dev/null; then
 fi
 
 STAGED={staged}
-rm -rf "$STAGED"
-ditto {source} "$STAGED"
+# The process id keeps the name free: something left behind by an earlier run that could not be
+# removed must not turn the rename below into a move *inside* an existing folder.
+PREVIOUS={previous}.$$
 
-# Verify before anything is destroyed: a bundle that arrived damaged must not replace a working one.
-codesign --verify --deep --strict "$STAGED" || {{ rm -rf "$STAGED"; exit 1; }}
+# Every step that can fail ends here, and the app that was running is still at its path: the
+# update is abandoned and it comes back. The disk image stays mounted, with its window open, so
+# dragging the new version across by hand is still one gesture away.
+give_up() {{
+  rm -rf "$STAGED"
+  open {target}
+  rm -f "$0"
+  exit 1
+}}
 
-rm -rf {target}
-mv "$STAGED" {target}
+rm -rf "$STAGED" || give_up
+ditto {source} "$STAGED" || give_up
+
+# Verify before anything is moved: a bundle that arrived damaged, or that somebody else signed,
+# must not replace a working one.
+codesign --verify --deep --strict -R={signed_by_us} "$STAGED" || give_up
+
+# Swap by renaming. The old bundle steps aside whole and is only deleted once the new one sits
+# where it was; if the second rename fails, the first one is undone.
+mv {target} "$PREVIOUS" || give_up
+if ! mv "$STAGED" {target}; then
+  mv "$PREVIOUS" {target}
+  give_up
+fi
+rm -rf "$PREVIOUS" || true
 
 hdiutil detach {mount} -quiet || true
 
@@ -927,30 +1007,54 @@ rm -f "$0"
 
 #[cfg(test)]
 mod install_update_tests {
-    use super::build_install_script;
-    use std::path::Path;
+    use super::{SIGNING_TEAM_ID, build_install_script, can_replace_in};
+    use std::{
+        fs,
+        os::unix::fs::PermissionsExt,
+        path::{Path, PathBuf},
+        process::Command,
+    };
+    use tempdir::TempDir;
 
-    #[test]
-    fn the_script_never_destroys_before_the_copy_is_verified() {
-        let script = build_install_script(
+    /// A process id nothing is running under, so the script does not wait for anybody to quit.
+    const NOBODY: u32 = i32::MAX as u32;
+
+    fn script_for_applications() -> String {
+        build_install_script(
             Path::new("/Volumes/Cardinal/Cardinal.app"),
             Path::new("/Applications/Cardinal.app"),
             "/Volumes/Cardinal",
             Path::new("/Users/x/Downloads/Cardinal_0.5.0_aarch64.dmg"),
             Path::new("/Users/x/.Trash/Cardinal_0.5.0_aarch64.dmg"),
             4242,
-        );
+        )
+    }
+
+    #[test]
+    fn the_working_app_is_moved_aside_whole_and_only_after_the_copy_is_verified() {
+        let script = script_for_applications();
 
         let staged = script.find("ditto").expect("stages a copy");
         let verified = script.find("codesign --verify").expect("verifies it");
-        let destroyed = script
-            .find("rm -rf '/Applications/Cardinal.app'")
-            .expect("removes the old");
+        let stepped_aside = script
+            .find(r#"mv '/Applications/Cardinal.app' "$PREVIOUS""#)
+            .expect("moves the old bundle aside");
+        let in_place = script
+            .find(r#"mv "$STAGED" '/Applications/Cardinal.app'"#)
+            .expect("moves the new one in");
+        let removed = script
+            .find(r#"rm -rf "$PREVIOUS""#)
+            .expect("removes the old one");
         assert!(staged < verified, "copy before verifying");
         assert!(
-            verified < destroyed,
-            "verify before removing the app that currently works, or a damaged download leaves \
+            verified < stepped_aside,
+            "verify before touching the app that currently works, or a damaged download leaves \
              the user with nothing"
+        );
+        assert!(stepped_aside < in_place && in_place < removed);
+        assert!(
+            !script.contains("rm -rf '/Applications/Cardinal.app'"),
+            "never deleted in place: a delete that stops half-way leaves no app at all"
         );
         assert!(
             script.contains("kill -0 4242"),
@@ -976,6 +1080,10 @@ mod install_update_tests {
             1,
         );
         assert!(script.contains(r"'/Users/x/Ap'\''ps/Cardinal.app'"));
+        // The staging copy and the bundle stepping aside are derived from that same path, so they
+        // have to be escaped from the raw name too, not from the already-quoted one.
+        assert!(script.contains(r"'/Users/x/Ap'\''ps/Cardinal.app.new'"));
+        assert!(script.contains(r"'/Users/x/Ap'\''ps/Cardinal.app.old'"));
         assert!(!script.contains("Ap'ps"), "the raw quote must not survive");
         assert!(script.contains(r"'/Users/x/Downloads/Card'\''inal.dmg'"));
         assert!(
@@ -986,14 +1094,7 @@ mod install_update_tests {
 
     #[test]
     fn the_disk_image_is_trashed_rather_than_deleted_and_only_after_it_is_unmounted() {
-        let script = build_install_script(
-            Path::new("/Volumes/Cardinal/Cardinal.app"),
-            Path::new("/Applications/Cardinal.app"),
-            "/Volumes/Cardinal",
-            Path::new("/Users/x/Downloads/Cardinal_0.5.0_aarch64.dmg"),
-            Path::new("/Users/x/.Trash/Cardinal_0.5.0_aarch64.dmg"),
-            7,
-        );
+        let script = script_for_applications();
 
         let detached = script.find("hdiutil detach").expect("unmounts");
         let moved = script
@@ -1012,6 +1113,251 @@ mod install_update_tests {
             !script.contains("rm -f '/Users/x/Downloads"),
             "never deleted outright: a bad update leaves the user needing this exact file"
         );
+    }
+
+    /// The team the installer insists on has to be the one releases are actually signed by.
+    #[test]
+    fn the_installer_requires_the_identity_the_releases_are_signed_with() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let identity = config["bundle"]["macOS"]["signingIdentity"]
+            .as_str()
+            .expect("a signing identity");
+        assert!(
+            identity.ends_with(&format!("({SIGNING_TEAM_ID})")),
+            "the build signs as {identity:?}, but the installer only accepts team \
+             {SIGNING_TEAM_ID}: every update would be refused"
+        );
+    }
+
+    /// What running the installer left behind, in a sandbox where nothing real is touched.
+    struct Installed {
+        _sandbox: TempDir,
+        exit_code: i32,
+        root: PathBuf,
+    }
+
+    impl Installed {
+        fn read(&self, relative: &str) -> Option<String> {
+            fs::read_to_string(self.root.join(relative)).ok()
+        }
+
+        fn names_in(&self, relative: &str) -> Vec<String> {
+            let mut names: Vec<String> = fs::read_dir(self.root.join(relative))
+                .unwrap()
+                .flatten()
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect();
+            names.sort();
+            names
+        }
+    }
+
+    /// What to make go wrong while the installer runs.
+    #[derive(PartialEq)]
+    enum Fault {
+        Nothing,
+        /// The copy does not verify: damaged on the way, or signed by somebody else.
+        Verification,
+        /// The old bundle has stepped aside and the new one cannot be moved in.
+        MovingIn,
+    }
+
+    /// Runs the real script with `/bin/sh`. Only the tools that would reach outside the sandbox —
+    /// `codesign`, `open`, `hdiutil` — are replaced, by stubs placed ahead of them on `PATH` that
+    /// write down what they were called with.
+    fn run_installer(fault: Fault) -> Installed {
+        let sandbox = TempDir::new("cardinal_installer").unwrap();
+        let root = sandbox.path().to_path_buf();
+        for dir in [
+            "apps/Cardinal.app/Contents",
+            "volume/Cardinal.app/Contents",
+            "downloads",
+            "trash",
+            "bin",
+        ] {
+            fs::create_dir_all(root.join(dir)).unwrap();
+        }
+        fs::write(root.join("apps/Cardinal.app/Contents/version"), "old").unwrap();
+        // Only the old version has this file: a copy *over* the bundle would leave it behind.
+        fs::write(root.join("apps/Cardinal.app/Contents/dropped"), "old").unwrap();
+        fs::write(root.join("volume/Cardinal.app/Contents/version"), "new").unwrap();
+        fs::write(root.join("downloads/Cardinal_9.9.9.dmg"), "image").unwrap();
+
+        let stub = |name: &str, body: String| {
+            let path = root.join("bin").join(name);
+            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+        };
+        let log = |name: &str| root.join(name).to_string_lossy().into_owned();
+        stub(
+            "codesign",
+            format!(
+                "printf '%s\\n' \"$@\" > '{}'\nexit {}",
+                log("codesign.args"),
+                if fault == Fault::Verification { 1 } else { 0 }
+            ),
+        );
+        if fault == Fault::MovingIn {
+            // The staging copy is the only thing the script ever moves *from* a `.new` path.
+            stub(
+                "mv",
+                "case \"$1\" in *.new) exit 1 ;; esac\nexec /bin/mv \"$@\"".to_string(),
+            );
+        }
+        stub("open", format!("echo \"$1\" >> '{}'", log("opened")));
+        stub(
+            "hdiutil",
+            format!("echo \"$@\" >> '{}'", log("hdiutil.args")),
+        );
+
+        let script_path = root.join("install.sh");
+        fs::write(
+            &script_path,
+            build_install_script(
+                &root.join("volume/Cardinal.app"),
+                &root.join("apps/Cardinal.app"),
+                &root.join("volume").to_string_lossy(),
+                &root.join("downloads/Cardinal_9.9.9.dmg"),
+                &root.join("trash/Cardinal_9.9.9.dmg"),
+                NOBODY,
+            ),
+        )
+        .unwrap();
+
+        let status = Command::new("/bin/sh")
+            .arg(&script_path)
+            .env(
+                "PATH",
+                format!("{}:/usr/bin:/bin", root.join("bin").display()),
+            )
+            .status()
+            .expect("the installer runs");
+
+        Installed {
+            _sandbox: sandbox,
+            exit_code: status.code().expect("it was not killed"),
+            root,
+        }
+    }
+
+    #[test]
+    fn a_verified_update_replaces_the_app_and_leaves_nothing_behind() {
+        let installed = run_installer(Fault::Nothing);
+
+        assert_eq!(installed.exit_code, 0);
+        assert_eq!(
+            installed
+                .read("apps/Cardinal.app/Contents/version")
+                .as_deref(),
+            Some("new")
+        );
+        assert_eq!(
+            installed.read("apps/Cardinal.app/Contents/dropped"),
+            None,
+            "a file the new version no longer ships must not survive the update"
+        );
+        assert_eq!(
+            installed.names_in("apps"),
+            vec!["Cardinal.app"],
+            "neither the staging copy nor the old bundle is left lying around"
+        );
+        assert_eq!(
+            installed.read("opened").as_deref(),
+            Some(format!("{}\n", installed.root.join("apps/Cardinal.app").display()).as_str()),
+            "relaunched, once"
+        );
+        assert_eq!(installed.names_in("downloads"), Vec::<String>::new());
+        assert_eq!(installed.names_in("trash"), vec!["Cardinal_9.9.9.dmg"]);
+        assert!(
+            !installed.root.join("install.sh").exists(),
+            "cleans itself up"
+        );
+
+        // What reaches codesign is one argument per line: the requirement has to arrive whole,
+        // quotes and all, or it is not the requirement that was meant.
+        let arguments = installed.read("codesign.args").expect("codesign was asked");
+        assert!(
+            arguments.lines().any(|line| line
+                == format!(
+                    r#"-R=anchor apple generic and certificate leaf[subject.OU] = "{SIGNING_TEAM_ID}""#
+                )),
+            "the signer is part of what gets verified: {arguments}"
+        );
+    }
+
+    /// The failure that used to end with no app on screen and no word about it.
+    #[test]
+    fn an_update_that_fails_verification_brings_the_old_app_back_untouched() {
+        let installed = run_installer(Fault::Verification);
+
+        assert_ne!(installed.exit_code, 0);
+        assert_eq!(
+            installed
+                .read("apps/Cardinal.app/Contents/version")
+                .as_deref(),
+            Some("old"),
+            "a bundle that does not verify must not replace a working one"
+        );
+        assert_eq!(installed.names_in("apps"), vec!["Cardinal.app"]);
+        assert_eq!(
+            installed.read("opened").as_deref(),
+            Some(format!("{}\n", installed.root.join("apps/Cardinal.app").display()).as_str()),
+            "the app that was running comes back instead of just being gone"
+        );
+        assert_eq!(
+            installed.names_in("downloads"),
+            vec!["Cardinal_9.9.9.dmg"],
+            "the image stays where it is, for installing by hand"
+        );
+        assert_eq!(
+            installed.read("hdiutil.args"),
+            None,
+            "and stays mounted, with its window open"
+        );
+    }
+
+    /// The one moment with no bundle at the app's path: it has to be put back, not left that way.
+    #[test]
+    fn an_update_that_cannot_be_moved_in_puts_the_old_app_back() {
+        let installed = run_installer(Fault::MovingIn);
+
+        assert_ne!(installed.exit_code, 0);
+        assert_eq!(
+            installed
+                .read("apps/Cardinal.app/Contents/version")
+                .as_deref(),
+            Some("old"),
+            "the bundle that stepped aside is moved back to where the user launches it from"
+        );
+        assert_eq!(installed.names_in("apps"), vec!["Cardinal.app"]);
+        assert_eq!(
+            installed.read("opened").as_deref(),
+            Some(format!("{}\n", installed.root.join("apps/Cardinal.app").display()).as_str())
+        );
+    }
+
+    #[test]
+    fn replacing_is_refused_up_front_where_the_folder_cannot_be_written() {
+        let temp = TempDir::new("cardinal_can_replace").unwrap();
+        let writable = temp.path().join("writable");
+        let locked = temp.path().join("locked");
+        fs::create_dir_all(&writable).unwrap();
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).unwrap();
+
+        assert!(can_replace_in(&writable));
+        assert_eq!(
+            fs::read_dir(&writable).unwrap().count(),
+            0,
+            "asking leaves nothing behind"
+        );
+        // What /Applications is to an account that is not an administrator.
+        assert!(!can_replace_in(&locked));
+        assert!(!can_replace_in(&temp.path().join("missing")));
+
+        // So the temporary directory can be removed again.
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
     }
 }
 

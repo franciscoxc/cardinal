@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "Falha no download",
       "body": "O Cardinal não conseguiu baixar a atualização. Você pode obtê-la na página de versões."
+    },
+    "installFailed": {
+      "title": "Falha na instalação",
+      "body": "O Cardinal não consegue se substituir na pasta onde está instalado. A nova versão está aberta no Finder: feche o Cardinal e arraste-a para Aplicativos."
     }
   }
 }

@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "Download failed",
       "body": "Cardinal could not download the update. You can get it from the releases page instead."
+    },
+    "installFailed": {
+      "title": "Could not install",
+      "body": "Cardinal cannot replace itself in the folder it is installed in. The new version is open in Finder: quit Cardinal and drag it to Applications."
     }
   }
 }

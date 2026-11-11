@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "Échec du téléchargement",
       "body": "Cardinal n'a pas pu télécharger la mise à jour. Vous pouvez l'obtenir depuis la page des versions."
+    },
+    "installFailed": {
+      "title": "Échec de l'installation",
+      "body": "Cardinal ne peut pas se remplacer lui-même dans le dossier où il est installé. La nouvelle version est ouverte dans le Finder : quittez Cardinal et faites-la glisser dans Applications."
     }
   }
 }

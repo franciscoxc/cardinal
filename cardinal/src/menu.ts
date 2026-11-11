@@ -1,8 +1,9 @@
 import { getName } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import i18n from './i18n/config';
-import { checkForUpdates } from './utils/checkForUpdates';
+import { ALL_RELEASES_PAGE, checkForUpdates } from './utils/checkForUpdates';
 import { openPreferences } from './utils/openPreferences';
 
 let menuInitPromise: Promise<void> | null = null;
@@ -93,7 +94,12 @@ async function buildAppMenu(): Promise<void> {
   const releaseNotesItem = await MenuItem.new({
     id: 'menu.help_updates',
     text: i18n.t('menu.releaseNotes'),
-    action: () => void checkForUpdates(),
+    // The page, as the label says. It ran the update check, like the item in the app menu, so
+    // "Releases" answered "you are up to date" and there was nowhere to read what had changed.
+    action: () =>
+      void openUrl(ALL_RELEASES_PAGE).catch((error) => {
+        console.error('Failed to open the releases page', error);
+      }),
   });
   const helpSubmenu = await Submenu.new({
     id: 'menu.help-root',

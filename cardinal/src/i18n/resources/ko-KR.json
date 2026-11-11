@@ -255,6 +255,10 @@
     "downloadFailed": {
       "title": "다운로드 실패",
       "body": "업데이트를 내려받지 못했습니다. 릴리스 페이지에서 받을 수 있습니다."
+    },
+    "installFailed": {
+      "title": "설치 실패",
+      "body": "Cardinal이 설치된 폴더에서 스스로를 교체할 수 없습니다. 새 버전이 Finder에 열려 있습니다. Cardinal을 종료하고 응용 프로그램으로 끌어다 놓으세요."
     }
   }
 }
