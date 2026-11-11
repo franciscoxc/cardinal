@@ -31,13 +31,13 @@
 
 ## What this fork fixes
 
-Bugs in the engine, each found by measuring it. The three with a link were reported back upstream:
+Bugs in the engine, each reported back upstream with the measurements that found it:
 
 - **Deletions stop being lost.** One filesystem event at the watch root made the whole batch return early, throwing away every other change bundled with it — and nothing ever performed the rescan it asked for, so those changes were gone for good. Measured on a real 5.36M-node index: 237 discarded batches, and every sampled entry under `DerivedData` and `.Trash` no longer existed on disk while the index still offered it. ([#229](https://github.com/cardisoft/cardinal/issues/229))
 - **A content search stops downloading your iCloud Drive.** Reading a file is what makes macOS materialise a placeholder, so searching a synced home folder quietly pulled down every PDF, video and archive that was not on the disk. The flag is now read without materialising anything, and the app says how many files it skipped and what they weigh. ([#231](https://github.com/cardisoft/cardinal/issues/231))
 - **`content:` stops costing 60× more depending on word order.** It shared a filter priority with `type:`, so `content:invoice type:email` opened and read every file on the disk while `type:email content:invoice` read only the mail. It now always runs last, on the smallest candidate set. ([#230](https://github.com/cardisoft/cardinal/issues/230))
-- **A content search stops hanging the app for good.** The index holds entries under `/dev`, and `/dev/fd/N` is whatever the process looking at it has open — a socket, in the app — so reading one waited for data that never came, and every search after it said "Searching…" until a restart. Content is no longer read from `/dev`, nor from anything that is not a regular file when it is opened.
-- **A cancelled content search lets go at once.** The side handing files to the readers never checked for cancellation, so a search already replaced kept walking every node it had left: 10.3 s before the next one could start on a 6.28M-node index, under 70 ms now.
+- **A content search stops hanging the app for good.** The index holds entries under `/dev`, and `/dev/fd/N` is whatever the process looking at it has open — a socket, in the app — so reading one waited for data that never came, and every search after it said "Searching…" until a restart. Content is no longer read from `/dev`, nor from anything that is not a regular file when it is opened. ([#239](https://github.com/cardisoft/cardinal/issues/239))
+- **A cancelled content search lets go at once.** The side handing files to the readers never checked for cancellation, so a search already replaced kept walking every node it had left: 10.3 s before the next one could start on a 6.28M-node index, under 70 ms now. ([#240](https://github.com/cardisoft/cardinal/issues/240))
 
 Everything below is the original project's documentation, unchanged.
 
