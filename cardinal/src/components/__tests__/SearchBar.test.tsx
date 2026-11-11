@@ -37,6 +37,7 @@ const baseProps = (
     caseSensitiveLabel: 'Case sensitive',
     fileTypeEnabled: true,
     onQueryValueChange: vi.fn(),
+    onQueryValueTyped: vi.fn(),
     onDirectoryValueChange: vi.fn(),
     onFocus: vi.fn(),
     onBlur: vi.fn(),
@@ -100,12 +101,30 @@ describe('SearchBar', () => {
   });
 
   it('writes each word the contains field types as its own content filter', () => {
-    const onQueryValueChange = vi.fn();
-    renderSearchBar({ value: 'informe', onQueryValueChange });
+    const onQueryValueTyped = vi.fn();
+    renderSearchBar({ value: 'informe', onQueryValueTyped });
 
     const contains = screen.getByPlaceholderText('search.content.hint');
     fireEvent.change(contains, { target: { value: 'Bearer token' } });
-    expect(onQueryValueChange).toHaveBeenCalledWith('informe content:"Bearer" content:"token"');
+    expect(onQueryValueTyped).toHaveBeenCalledWith('informe content:"Bearer" content:"token"');
+  });
+
+  it('reports typing in the contains field as typing, and clearing it as a decision', () => {
+    const onQueryValueChange = vi.fn();
+    const onQueryValueTyped = vi.fn();
+    renderSearchBar({ value: 'content:"informe"', onQueryValueChange, onQueryValueTyped });
+
+    // Each letter here rewrites the query. Reported as a commit, every one of them started a
+    // content search at once — a read of the whole disk when the main field is empty.
+    const contains = screen.getByDisplayValue('informe');
+    fireEvent.change(contains, { target: { value: 'informes' } });
+    expect(onQueryValueTyped).toHaveBeenCalledWith('content:"informes"');
+    expect(onQueryValueChange).not.toHaveBeenCalled();
+
+    // A click on the clear button is not typing: it should take effect now.
+    const clearButtons = screen.getAllByRole('button', { name: 'search.clear' });
+    fireEvent.click(clearButtons[clearButtons.length - 1]);
+    expect(onQueryValueChange).toHaveBeenCalledWith('');
   });
 
   it('routes directory input focus state through the shared search focus handlers', () => {
@@ -260,21 +279,21 @@ describe('SearchBar', () => {
   });
 
   it('keeps a space while it is being typed, so two words can be entered in one go', () => {
-    const onQueryValueChange = vi.fn();
-    const { rerender } = render(<SearchBar {...baseProps({ value: '', onQueryValueChange })} />);
+    const onQueryValueTyped = vi.fn();
+    const { rerender } = render(<SearchBar {...baseProps({ value: '', onQueryValueTyped })} />);
     const contains = screen.getByPlaceholderText('search.content.hint') as HTMLInputElement;
 
     fireEvent.change(contains, { target: { value: 'informe' } });
-    expect(onQueryValueChange).toHaveBeenLastCalledWith('content:"informe"');
+    expect(onQueryValueTyped).toHaveBeenLastCalledWith('content:"informe"');
 
     // The query comes back without the trailing space — it cannot encode one — so a fully
     // controlled field erased it as soon as it was typed, and the next letter joined the words.
-    rerender(<SearchBar {...baseProps({ value: 'content:"informe"', onQueryValueChange })} />);
+    rerender(<SearchBar {...baseProps({ value: 'content:"informe"', onQueryValueTyped })} />);
     fireEvent.change(contains, { target: { value: 'informe ' } });
     expect(contains.value).toBe('informe ');
 
     fireEvent.change(contains, { target: { value: 'informe mensual' } });
-    expect(onQueryValueChange).toHaveBeenLastCalledWith('content:"informe" content:"mensual"');
+    expect(onQueryValueTyped).toHaveBeenLastCalledWith('content:"informe" content:"mensual"');
   });
 
   it('shows a custom entry, and changes nothing, for a query it cannot represent', () => {

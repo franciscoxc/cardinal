@@ -456,6 +456,13 @@ function App() {
     [submitFilesQuery],
   );
 
+  // The "Contains" field rewrites the query too, but as it is typed in: it waits out the same
+  // pause as the main field instead of searching file contents once per letter.
+  const onContentQueryTyped = useCallback(
+    (nextQuery: string) => submitFilesQuery(nextQuery),
+    [submitFilesQuery],
+  );
+
   // A path picked in the native dialog is a decision, not typing: search for it right away.
   const onDirectoryValueChange = useCallback(
     (nextDirectory: string) => queueDirectorySearch(nextDirectory, { immediate: true }),
@@ -505,6 +512,7 @@ function App() {
           caseSensitiveLabel={caseSensitiveLabel}
           fileTypeEnabled={activeTab === 'files'}
           onQueryValueChange={onFileTypeQueryChange}
+          onQueryValueTyped={onContentQueryTyped}
           onDirectoryValueChange={onDirectoryValueChange}
           onFocus={handleSearchFocus}
           onBlur={handleSearchBlur}
@@ -549,9 +557,10 @@ function App() {
               contentTerms={snippetTerms}
               caseInsensitive={!caseSensitive}
               folderSizes={wantFolderSizes}
-              // ponytail-keep: the sort already queued a walk for every result, under one
-              // generation. Letting the viewport queue its own would open a newer generation and
-              // cancel them, so scrolling would restart the totals the ordering is waiting for.
+              // ponytail-keep: the sort already queued a walk for every result. Letting the
+              // viewport queue its own walks each visible folder a second time, and the second
+              // pass starts over from the indexed sum — so the total the ordering reads drops
+              // back in the middle of it and the rows shuffle for nothing.
               deepFolderSizes={wantDeepFolderSizes && !deepSortOwnsWalks}
               columnOrder={visibleColumns}
               onColumnMove={moveColumn}

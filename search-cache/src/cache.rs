@@ -60,6 +60,9 @@ pub struct SubtreeSize {
 /// Totals already computed, shared across one batch of [`SearchCache::subtree_size_memoized`].
 pub type SubtreeSizeMemo = HashMap<SlabIndex, SubtreeSize>;
 
+/// How many nodes a folder sum visits between two looks at its cancellation token.
+const SUM_CANCEL_CHECK_INTERVAL: usize = 1024;
+
 #[derive(Debug, Clone)]
 pub struct SearchOutcome {
     /// `None` means search was cancelled (not "no match");
@@ -734,7 +737,13 @@ impl SearchCache {
         let mut total = SubtreeSize::default();
 
         for child in children {
-            cancel.is_cancelled_sparse(*visited)?;
+            // ponytail-keep: checked far more often than `is_cancelled_sparse` would. That
+            // interval suits loops over memory, where 65,536 steps are a blink; a step here can
+            // be a `stat`, the first time a node is seen. Measured on a real index, a sum that
+            // scrolling had already superseded held the loop for up to a second before noticing.
+            if visited.is_multiple_of(SUM_CANCEL_CHECK_INTERVAL) {
+                cancel.is_cancelled()?;
+            }
             *visited += 1;
 
             // Sizes are not read from disk at index time, so an untouched node has none yet.

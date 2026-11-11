@@ -9,8 +9,8 @@ pub static ACTIVE_SEARCH_VERSION: AtomicU64 = AtomicU64::new(0);
 /// A global atomic identifies the active scanning process version of Cardinal.
 pub static ACTIVE_SCAN_VERSION: AtomicU64 = AtomicU64::new(0);
 
-/// A global atomic identifies the active folder-size walk generation.
-pub static ACTIVE_FOLDER_SIZE_VERSION: AtomicU64 = AtomicU64::new(0);
+/// A global atomic identifies the newest request for the rows on screen.
+pub static ACTIVE_VIEWPORT_VERSION: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug)]
 pub struct CancellationToken {
@@ -60,14 +60,26 @@ impl CancellationToken {
         }
     }
 
-    /// Creates a token for a batch of folder-size walks, cancelling any walk still running for an
-    /// older viewport. Its own generation, so a search or a rescan does not disturb it and it does
-    /// not disturb them.
-    pub fn new_folder_size() -> Self {
-        let version = self::ACTIVE_FOLDER_SIZE_VERSION.fetch_add(1, Ordering::SeqCst) + 1;
+    /// Marks a newer request for rows: whatever is still being added up for the rows asked for
+    /// before gives way to it.
+    ///
+    /// Folder totals for the visible rows are summed on the loop that also hands out the rows, and
+    /// the first sum of a large folder reads the disk for every file under it. Without a generation
+    /// of its own that sum could only be interrupted by a new search, so scrolling had to wait it
+    /// out. Its own generation, so a rescan does not disturb it and it does not disturb a search.
+    pub fn new_viewport() -> Self {
+        let version = self::ACTIVE_VIEWPORT_VERSION.fetch_add(1, Ordering::SeqCst) + 1;
         Self {
             version,
-            active_version: &ACTIVE_FOLDER_SIZE_VERSION,
+            active_version: &ACTIVE_VIEWPORT_VERSION,
+        }
+    }
+
+    /// A token for work that belongs to the rows already asked for, without superseding them.
+    pub fn current_viewport() -> Self {
+        Self {
+            version: self::ACTIVE_VIEWPORT_VERSION.load(Ordering::SeqCst),
+            active_version: &ACTIVE_VIEWPORT_VERSION,
         }
     }
 
@@ -108,6 +120,7 @@ mod tests {
     fn reset_versions() {
         ACTIVE_SEARCH_VERSION.store(0, Ordering::SeqCst);
         ACTIVE_SCAN_VERSION.store(0, Ordering::SeqCst);
+        ACTIVE_VIEWPORT_VERSION.store(0, Ordering::SeqCst);
     }
 
     #[test]
@@ -196,6 +209,39 @@ mod tests {
         assert!(
             search_v1.is_cancelled().is_none(),
             "search token should still be governed by search version updates"
+        );
+    }
+
+    #[test]
+    fn work_for_the_rows_on_screen_gives_way_to_a_newer_request_for_rows() {
+        let _guard = lock_versions();
+        reset_versions();
+
+        let _first_rows = CancellationToken::new_viewport();
+        let sums = CancellationToken::current_viewport();
+        assert!(
+            sums.is_cancelled().is_some(),
+            "joining the rows already asked for supersedes nothing"
+        );
+
+        // Neither of these asked for rows; who else has to end a sum is the caller's decision.
+        let _search = CancellationToken::new_search();
+        let _scan = CancellationToken::new_scan();
+        assert!(
+            sums.is_cancelled().is_some(),
+            "only a newer request for rows moves this generation"
+        );
+
+        let _next_rows = CancellationToken::new_viewport();
+        assert!(
+            sums.is_cancelled().is_none(),
+            "scrolling on has to be able to interrupt the sums of the rows left behind"
+        );
+        assert!(
+            CancellationToken::current_viewport()
+                .is_cancelled()
+                .is_some(),
+            "and the sums asked for after it belong to the new rows"
         );
     }
 }

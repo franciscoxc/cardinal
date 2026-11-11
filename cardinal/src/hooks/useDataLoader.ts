@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { subscribeFolderSizeUpdate, subscribeIconUpdate } from '../runtime/tauriEventRuntime';
-import type { NodeInfoResponse, SearchResultItem } from '../types/search';
+import type { FolderSizesResponse, NodeInfoResponse, SearchResultItem } from '../types/search';
 import type { SlabIndex } from '../types/slab';
 import type { FolderSizeUpdatePayload, IconUpdatePayload } from '../types/ipc';
 
@@ -16,9 +16,10 @@ const fromNodeInfo = (node: NodeInfoResponse): SearchResultItem => ({
   ctime: node.ctime ?? node.metadata?.ctime,
   icon: node.icon ?? undefined,
   contentContext: node.contentContext ?? undefined,
-  folderSize: node.folderSize ?? undefined,
-  folderSizeIncomplete: node.folderSizeIncomplete ?? undefined,
 });
+
+// The only kind of row with a total to add up.
+const DIRECTORY_TYPE = 1;
 
 // Data-only loader for visible rows. It owns row metadata caching and stale-request rejection;
 // VirtualList handles any temporary frozen-view rendering during result-set swaps.
@@ -114,7 +115,8 @@ export function useDataLoader(
 
         updates.forEach(({ slabIndex, bytes, done }) => {
           const current = prev.get(slabIndex as SlabIndex);
-          // A row that scrolled away is gone from the cache; its walk was cancelled anyway.
+          // Not a row of this result set: a last report from a walk the previous search left
+          // behind, which that search's replacement has already cancelled.
           if (!current) {
             return;
           }
@@ -147,6 +149,67 @@ export function useDataLoader(
     slabIndices.forEach((slabIndex) => loadingRef.current.delete(slabIndex));
   }, []);
 
+  // Fills in what the folders among rows already on screen hold.
+  //
+  // ponytail-keep: a request of its own, made after the rows are in, instead of a field on them.
+  // The total is added up on the loop that also hands out rows, and the first sum of a large
+  // folder reads the disk for every file under it — 28 s for a home folder, measured. Travelling
+  // with the rows, one such folder in view left the whole list blank for that long.
+  const loadFolderSizes = useCallback(async (folders: SlabIndex[], versionAtRequest: number) => {
+    let pending = folders;
+    while (pending.length > 0) {
+      const asked = pending;
+      const { sizes, interrupted } = await invoke<FolderSizesResponse>('get_folder_sizes', {
+        results: asked,
+        deepFolderSizes: optionsRef.current.deepFolderSizes,
+      });
+      if (versionRef.current !== versionAtRequest) {
+        return;
+      }
+
+      setCache((prev) => {
+        if (versionRef.current !== versionAtRequest) return prev;
+        let nextCache: DataLoaderCache | null = null;
+
+        asked.forEach((slabIndex, idx) => {
+          const size = sizes[idx];
+          const current = prev.get(slabIndex);
+          // ponytail-keep: a row that already has a total keeps it. The only thing that can have
+          // put one there first is the disk walk this same request started, which begins from the
+          // indexed sum and only ever adds. Writing the indexed sum over it made the number drop
+          // back — and when the walk had already finished, brought the "+" back for good, because
+          // a finished walk does not report again.
+          if (!size || !current || current.folderSize != null) {
+            return;
+          }
+          nextCache ??= new Map(prev);
+          nextCache.set(slabIndex, {
+            ...current,
+            folderSize: size.bytes,
+            folderSizeIncomplete: size.incomplete,
+          });
+        });
+
+        if (nextCache === null) {
+          return prev;
+        }
+
+        cacheRef.current = nextCache;
+        return nextCache;
+      });
+
+      // ponytail-keep: only an interrupted answer is asked again. Scrolling asks for new rows,
+      // and that takes the loop back from the totals still being added up — which is the point,
+      // or the new rows would wait behind them. The folders it did not get to come back without
+      // a total, exactly like a row that will never have one; without the flag there is no
+      // telling them apart, and asking again regardless never stops for the second kind.
+      if (!interrupted) {
+        return;
+      }
+      pending = asked.filter((_, idx) => !sizes[idx]);
+    }
+  }, []);
+
   const ensureRangeLoaded = useCallback(
     async (start: number, end: number) => {
       const list = resultsRef.current;
@@ -163,9 +226,15 @@ export function useDataLoader(
       }
       if (needLoading.length === 0) return;
       const versionAtRequest = versionRef.current;
+      const {
+        contentTerms: terms,
+        caseInsensitive: foldCase,
+        folderSizes: wantSizes,
+      } = optionsRef.current;
       const fetched = await invoke<NodeInfoResponse[]>('get_nodes_info', {
         results: needLoading,
-        ...optionsRef.current,
+        contentTerms: terms,
+        caseInsensitive: foldCase,
       });
       if (versionRef.current !== versionAtRequest) {
         // The result-set changed while this request was in flight. Drop the payload instead of
@@ -211,8 +280,19 @@ export function useDataLoader(
         cacheRef.current = nextCache;
         return nextCache;
       });
+
+      if (!wantSizes) {
+        return;
+      }
+      const folders = needLoading.filter(
+        (_, idx) => fetched[idx]?.metadata?.type === DIRECTORY_TYPE,
+      );
+      // Not awaited: this promise settles when the rows are in, which is what callers wait for.
+      void loadFolderSizes(folders, versionAtRequest).catch((error) => {
+        console.error('Failed to load folder sizes:', error);
+      });
     },
-    [releaseLoadingBatch],
+    [loadFolderSizes, releaseLoadingBatch],
   );
 
   return { cache, ensureRangeLoaded };

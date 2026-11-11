@@ -7,6 +7,7 @@ import App from '../App';
 const mocks = vi.hoisted(() => ({
   filesTabContentProps: vi.fn(),
   navigateSearchHistory: vi.fn(),
+  queueSearch: vi.fn(),
   selectSingleRow: vi.fn(),
 }));
 
@@ -28,6 +29,8 @@ vi.mock('../components/SearchBar', () => ({
     onKeyDown,
     onFocus,
     onBlur,
+    onQueryValueChange,
+    onQueryValueTyped,
   }: {
     inputRef: Ref<HTMLInputElement>;
     value: string;
@@ -35,16 +38,23 @@ vi.mock('../components/SearchBar', () => ({
     onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
     onFocus: FocusEventHandler<HTMLInputElement>;
     onBlur: FocusEventHandler<HTMLInputElement>;
+    onQueryValueChange: (value: string) => void;
+    onQueryValueTyped: (value: string) => void;
   }) => (
-    <input
-      data-testid="search-input"
-      ref={inputRef}
-      value={value}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onFocus={onFocus}
-      onBlur={onBlur}
-    />
+    <>
+      <input
+        data-testid="search-input"
+        ref={inputRef}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        onBlur={onBlur}
+      />
+      {/* Stand-ins for the two ways a control rewrites the query: a pick, and a keystroke. */}
+      <button data-testid="pick-type" onClick={() => onQueryValueChange('type:image')} />
+      <button data-testid="type-contains" onClick={() => onQueryValueTyped('content:"i"')} />
+    </>
   ),
 }));
 
@@ -119,7 +129,7 @@ vi.mock('../hooks/useFileSearch', () => ({
       caseSensitive: false,
     },
     updateSearchParams: vi.fn(),
-    queueSearch: vi.fn(),
+    queueSearch: mocks.queueSearch,
     queueDirectorySearch: vi.fn(),
     queueDirectoryScopeOpen: vi.fn(),
     handleStatusUpdate: vi.fn(),
@@ -293,5 +303,22 @@ describe('App search result keyboard navigation', () => {
     expect(mocks.navigateSearchHistory).toHaveBeenCalledWith('newer');
     expect(mocks.selectSingleRow).toHaveBeenCalledWith(0);
     expect(document.activeElement).not.toBe(input);
+  });
+
+  it('searches at once for a picked filter, and waits out the pause for a typed one', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByTestId('pick-type'));
+    expect(mocks.queueSearch).toHaveBeenLastCalledWith(
+      'type:image',
+      expect.objectContaining({ immediate: true }),
+    );
+
+    // The "Contains" field used to take the same route. Every letter typed into it then started
+    // a content search immediately, and the engine needed ten seconds to let each one go.
+    fireEvent.click(screen.getByTestId('type-contains'));
+    const [query, options] = mocks.queueSearch.mock.lastCall as [string, { immediate?: boolean }];
+    expect(query).toBe('content:"i"');
+    expect(options.immediate).toBeFalsy();
   });
 });

@@ -219,8 +219,6 @@ export function useFileSearch(): UseFileSearchResult {
 
   const updateSearchParams = useCallback((patch: Partial<SearchParams>) => {
     latestSearchRef.current = { ...latestSearchRef.current, ...patch };
-    if (patch.directoryScopeOpen !== undefined) {
-    }
     patchSearchParams(patch);
   }, []);
 
@@ -282,6 +280,13 @@ export function useFileSearch(): UseFileSearchResult {
     if (!query && !directoryQuery) {
       hasInitialSearchRunRef.current = true;
       cancelTimer(loadingDelayTimerRef);
+      // ponytail-keep: not asking is not the same as stopping. Answering here used to leave the
+      // search this one replaces running — clear the field in the middle of a content search and
+      // the pane said to start typing while the engine went on reading the disk on every core,
+      // for minutes. The engine only abandons a search when told a newer one exists.
+      void invoke('cancel_search').catch((error) => {
+        console.error('Failed to cancel the running search:', error);
+      });
       dispatch({
         type: 'SEARCH_SUCCESS',
         payload: {

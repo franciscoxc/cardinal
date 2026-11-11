@@ -17,10 +17,10 @@ use background::{
 use cardinal_sdk::EventWatcher;
 use commands::{
     DeepFolderSizes, NodeInfoRequest, SearchJob, SearchState, WatchConfigUpdate,
-    activate_main_window, close_quicklook, copy_files_to_clipboard, download_and_mount_update,
-    get_app_status, get_nodes_info, get_sorted_view, hide_main_window, install_update,
-    normalize_watch_config, open_in_finder, open_path, quit_app, search,
-    set_tray_activation_policy, set_watch_config, start_logic, toggle_main_window,
+    activate_main_window, cancel_search, close_quicklook, copy_files_to_clipboard,
+    download_and_mount_update, get_app_status, get_folder_sizes, get_nodes_info, get_sorted_view,
+    hide_main_window, install_update, normalize_watch_config, open_in_finder, open_path, quit_app,
+    search, set_tray_activation_policy, set_watch_config, start_logic, toggle_main_window,
     toggle_quicklook, trigger_rescan, update_icon_viewport, update_quicklook,
 };
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded, unbounded};
@@ -134,7 +134,9 @@ pub fn run() -> Result<()> {
         ))
         .invoke_handler(tauri::generate_handler![
             search,
+            cancel_search,
             get_nodes_info,
+            get_folder_sizes,
             get_sorted_view,
             update_icon_viewport,
             get_app_status,
@@ -381,6 +383,15 @@ fn flush_cache_to_file_once(finish_tx: &Sender<Sender<Option<SearchCache>>>, db_
             info!("Cancelled before data constructed, no cache to flush");
         }
     });
+}
+
+/// Serialises the tests that move the cancellation generations. Those are process-wide, so one
+/// test starting a "new search" would otherwise cancel the token another is still holding.
+#[cfg(test)]
+pub(crate) fn hold_generations() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn wait_for_logic_start(rx: Receiver<LogicStartConfig>) -> Option<LogicStartConfig> {

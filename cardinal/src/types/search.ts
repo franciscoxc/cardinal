@@ -26,6 +26,12 @@ export type NodeInfoResponse = Readonly<{
   mtime?: number | null;
   ctime?: number | null;
   contentContext?: string | null;
-  folderSize?: number | null;
-  folderSizeIncomplete?: boolean | null;
+}>;
+
+/** What `get_folder_sizes` answers: one entry per index asked for, in the same order. */
+export type FolderSizesResponse = Readonly<{
+  /** `null` for anything that is not a folder, or that was not reached. */
+  sizes: readonly (Readonly<{ bytes: number; incomplete: boolean }> | null)[];
+  /** A newer request for rows took over first: whatever has no total yet is worth asking again. */
+  interrupted: boolean;
 }>;

@@ -36,7 +36,10 @@ type SearchBarProps = {
   onToggleCaseSensitive: (event: ChangeEvent<HTMLInputElement>) => void;
   caseSensitiveLabel: string;
   fileTypeEnabled: boolean;
+  /** A control rewrote the query in one go — a picked type, a cleared field: search now. */
   onQueryValueChange: (value: string) => void;
+  /** A field is rewriting the query as it is typed in: search once the typing pauses. */
+  onQueryValueTyped: (value: string) => void;
   onDirectoryValueChange: (value: string) => void;
   onFocus: FocusEventHandler<HTMLInputElement>;
   onBlur: FocusEventHandler<HTMLInputElement>;
@@ -90,6 +93,7 @@ export function SearchBar({
   caseSensitiveLabel,
   fileTypeEnabled,
   onQueryValueChange,
+  onQueryValueTyped,
   onDirectoryValueChange,
   onFocus,
   onBlur,
@@ -155,9 +159,13 @@ export function SearchBar({
   const handleContentChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       setContentDraft(event.target.value);
-      onQueryValueChange(setContentTerm(value, event.target.value));
+      // ponytail-keep: typed, not committed. This went through the handler the type dropdown
+      // uses, which searches at once because a pick is a decision — so every letter typed here
+      // started a content search of its own. With nothing else in the bar that is a read of the
+      // whole disk, begun and thrown away once per keystroke.
+      onQueryValueTyped(setContentTerm(value, event.target.value));
     },
-    [onQueryValueChange, value],
+    [onQueryValueTyped, value],
   );
 
   const handleBrowseDirectory = useCallback(async () => {

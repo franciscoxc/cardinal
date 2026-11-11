@@ -64,9 +64,15 @@ pub struct SearchJob {
 #[derive(Debug, Clone)]
 pub struct NodeInfoRequest {
     pub slab_indices: Vec<SlabIndex>,
-    /// Only the rows on screen ask for folder sizes: the sum walks the subtree, so asking for
-    /// every result would traverse the whole index on each keystroke.
-    pub folder_sizes: bool,
+    /// Add up what the folders among them hold, for as long as this token holds.
+    ///
+    /// ponytail-keep: a token rather than a flag, so that nothing can ask for sums that cannot be
+    /// interrupted. A sum walks a subtree per folder on the loop that also answers searches, and
+    /// the first one over a large folder reads the disk for every file under it — 28 s for a home
+    /// folder, measured. With nothing to stop it, a result set of folders near the sort limit made
+    /// the app unresponsive for as long as that took, with the answer already worthless because
+    /// the user had typed on.
+    pub folder_sizes: Option<CancellationToken>,
     /// Also walk the excluded directories on disk to complete those totals. Expensive by
     /// definition — these are the paths left out to save battery — so it is opt-in twice over.
     pub deep_folder_sizes: bool,
@@ -79,14 +85,27 @@ pub struct NodeInfoResponse {
     pub nodes: Vec<SearchResultNode>,
     /// One entry per node, `None` for anything that is not a directory.
     pub folder_sizes: Vec<Option<FolderSize>>,
+    /// The token gave way before every folder was added up. The ones left without a total were
+    /// never looked at, which is not the same as having none.
+    pub folder_sizes_interrupted: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct FolderSize {
     pub bytes: i64,
     /// Something under the folder is missing from the total: unreadable, or kept out by the watch
     /// configuration. The UI shows the number as a lower bound when this is set.
     pub incomplete: bool,
+}
+
+/// What the folders on screen hold, asked for once their rows are already there.
+#[derive(Serialize)]
+pub struct FolderSizesResponse {
+    /// One entry per index asked for, `None` for anything that is not a folder or was not reached.
+    pub sizes: Vec<Option<FolderSize>>,
+    /// A newer request for rows took the loop back first; whatever has no total yet is worth
+    /// asking for again.
+    pub interrupted: bool,
 }
 
 #[derive(Default)]
@@ -142,12 +161,13 @@ impl SearchState {
     fn request_node_info(
         &self,
         slab_indices: Vec<SlabIndex>,
-        folder_sizes: bool,
+        folder_sizes: Option<CancellationToken>,
         deep_folder_sizes: bool,
     ) -> NodeInfoResponse {
         let empty = || NodeInfoResponse {
             nodes: Vec::new(),
             folder_sizes: Vec::new(),
+            folder_sizes_interrupted: false,
         };
         if slab_indices.is_empty() {
             return empty();
@@ -197,13 +217,25 @@ impl SearchState {
             return cached;
         }
 
-        let response =
-            self.request_node_info(slab_indices.to_vec(), folder_sizes, deep_folder_sizes);
-        *self.sorted_view_cache.lock() = Some(SortedViewCache {
-            slab_indices: slab_indices.to_vec(),
-            nodes: response.nodes.clone(),
-            folder_sizes: response.folder_sizes.clone(),
-        });
+        // Bound to the search that is running: an ordering is only worth anything for the result
+        // set that asked for it, so the next keystroke abandons its sums.
+        let response = self.request_node_info(
+            slab_indices.to_vec(),
+            folder_sizes.then(CancellationToken::current_search),
+            deep_folder_sizes,
+        );
+        // ponytail-keep: an interrupted answer is used once and not kept. A folder whose sum was
+        // abandoned comes back with no total, exactly like a row that is not a folder — so cached,
+        // it answered the next sort of the same results with folders ordered by the size of their
+        // inode, and went on doing so until the results changed. Running the same search again
+        // while an ordering was still adding up was enough.
+        if !response.folder_sizes_interrupted {
+            *self.sorted_view_cache.lock() = Some(SortedViewCache {
+                slab_indices: slab_indices.to_vec(),
+                nodes: response.nodes.clone(),
+                folder_sizes: response.folder_sizes.clone(),
+            });
+        }
         (response.nodes, response.folder_sizes)
     }
 
@@ -290,12 +322,6 @@ pub struct NodeInfo {
     pub icon: Option<String>,
     #[serde(rename = "contentContext")]
     pub content_context: Option<String>,
-    /// Bytes held by a directory, absent for files and when the caller did not ask.
-    #[serde(rename = "folderSize")]
-    pub folder_size: Option<i64>,
-    /// The folder's total is a lower bound: something under it is unreadable or excluded.
-    #[serde(rename = "folderSizeIncomplete")]
-    pub folder_size_incomplete: Option<bool>,
 }
 
 #[derive(Serialize, Default)]
@@ -385,7 +411,7 @@ pub async fn search(
     // Totals walked for the previous result set say nothing about this one, and the walks behind
     // them are about to be abandoned anyway.
     state.clear_deep_folder_sizes();
-    let cancellation_token = CancellationToken::new_search();
+    let cancellation_token = supersede_running_search();
     let (result_tx, result_rx) = bounded(1);
     if let Err(e) = state.search_tx.send(SearchJob {
         query: SearchQuery {
@@ -436,14 +462,37 @@ pub async fn search(
     .map_err(|e| format!("Failed to process search result: {e:?}"))
 }
 
+/// Starts a new search generation, taking the loop back from whatever the last one left on it.
+///
+/// Folder sums for the rows on screen run under the viewport generation, so that scrolling can
+/// interrupt them. A search therefore has to end that generation as well, or the first sum of a
+/// large folder would keep the loop from the very search that replaced its rows.
+fn supersede_running_search() -> CancellationToken {
+    let _ = CancellationToken::new_viewport();
+    CancellationToken::new_search()
+}
+
+/// Abandons the search in flight without starting another.
+///
+/// The frontend answers an empty query by itself — nothing to ask for means nothing to ask — but
+/// that left the search it replaced running. Clearing the field showed the idle pane while a
+/// content search went on reading the disk on every core, for minutes, with nobody waiting.
+///
+/// ponytail-keep: a plain command, not `async`. An async one waits for a runtime worker, and
+/// `search` holds its worker until the loop answers — so with enough searches piled up, a cancel
+/// would sit behind the ones it is meant to end and land on whatever was typed after it. This
+/// runs where the message is delivered, before the next one is looked at.
+#[tauri::command]
+pub fn cancel_search() {
+    let _ = supersede_running_search();
+}
+
 #[tauri::command(async)]
 pub fn get_nodes_info(
     results: Vec<SlabIndex>,
     include_icons: Option<bool>,
     content_terms: Option<Vec<String>>,
     case_insensitive: Option<bool>,
-    folder_sizes: Option<bool>,
-    deep_folder_sizes: Option<bool>,
     state: State<'_, SearchState>,
 ) -> Vec<NodeInfo> {
     if results.is_empty() {
@@ -453,20 +502,17 @@ pub fn get_nodes_info(
     let include_icons = include_icons.unwrap_or(true);
     let content_terms = content_terms.unwrap_or_default();
     let case_insensitive = case_insensitive.unwrap_or_default();
-    let NodeInfoResponse {
-        nodes,
-        folder_sizes,
-    } = state.request_node_info(
-        results,
-        folder_sizes.unwrap_or_default(),
-        deep_folder_sizes.unwrap_or_default(),
-    );
+    // ponytail-keep: rows never wait for folder totals, and asking for rows interrupts the
+    // totals still being added up for the rows asked for before. Both used to travel in one
+    // answer, so a single large folder in view left the whole list blank until its sum finished
+    // — and only a new search could stop it. Totals now come from `get_folder_sizes`, afterwards.
+    let _ = CancellationToken::new_viewport();
+    let NodeInfoResponse { nodes, .. } = state.request_node_info(results, None, false);
 
     // Rows are independent, and each one may read a file for its icon and its content snippet.
     nodes
         .into_par_iter()
-        .enumerate()
-        .map(|(row, SearchResultNode { path, metadata })| {
+        .map(|SearchResultNode { path, metadata }| {
             let content_context = content_terms
                 .iter()
                 .find_map(|term| content_snippet(&path, term, case_insensitive));
@@ -481,17 +527,32 @@ pub fn get_nodes_info(
             } else {
                 None
             };
-            let folder_size = folder_sizes.get(row).copied().flatten();
             NodeInfo {
                 path,
                 icon,
                 metadata: metadata.as_ref().map(NodeInfoMetadata::from_metadata),
                 content_context,
-                folder_size: folder_size.map(|size| size.bytes),
-                folder_size_incomplete: folder_size.map(|size| size.incomplete),
             }
         })
         .collect()
+}
+
+/// What the folders among `results` hold, for rows that are already on screen.
+#[tauri::command(async)]
+pub fn get_folder_sizes(
+    results: Vec<SlabIndex>,
+    deep_folder_sizes: Option<bool>,
+    state: State<'_, SearchState>,
+) -> FolderSizesResponse {
+    // Joins the rows already asked for rather than superseding them: the next request for rows,
+    // or the next search, is what ends it.
+    let token = CancellationToken::current_viewport();
+    let response =
+        state.request_node_info(results, Some(token), deep_folder_sizes.unwrap_or_default());
+    FolderSizesResponse {
+        sizes: response.folder_sizes,
+        interrupted: response.folder_sizes_interrupted,
+    }
 }
 
 #[tauri::command(async)]
@@ -1058,6 +1119,104 @@ fn copy_files_to_clipboard_impl(paths: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use search_cache::SlabNodeMetadataCompact;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    };
+
+    /// A `SearchState` whose node-info requests are answered by `answer` instead of the real loop.
+    fn state_answering(
+        answer: impl Fn(&NodeInfoRequest) -> NodeInfoResponse + Send + 'static,
+    ) -> SearchState {
+        let (search_tx, _) = crossbeam_channel::unbounded();
+        let (node_info_tx, node_info_rx) = crossbeam_channel::unbounded::<NodeInfoRequest>();
+        let (icon_viewport_tx, _) = crossbeam_channel::unbounded();
+        let (rescan_tx, _) = crossbeam_channel::unbounded();
+        let (watch_config_tx, _) = crossbeam_channel::unbounded();
+        let (update_window_state_tx, _) = bounded(1);
+        // Ends by itself once the state, which owns the only sender, is dropped.
+        std::thread::spawn(move || {
+            for request in node_info_rx {
+                let _ = request.response_tx.send(answer(&request));
+            }
+        });
+        SearchState::new(
+            search_tx,
+            node_info_tx,
+            icon_viewport_tx,
+            rescan_tx,
+            watch_config_tx,
+            Default::default(),
+            update_window_state_tx,
+        )
+    }
+
+    /// Clearing the search field has to stop what the previous search left running.
+    ///
+    /// The frontend answers an empty query without asking, so nothing told the engine to stop: a
+    /// content search went on reading the whole disk after the field was empty.
+    #[test]
+    fn cancelling_ends_the_search_and_the_folder_sums_it_left_running() {
+        let _generations = crate::hold_generations();
+        let search = CancellationToken::new_search();
+        let sums = CancellationToken::current_viewport();
+
+        cancel_search();
+
+        assert!(search.is_cancelled().is_none(), "the search in flight");
+        assert!(
+            sums.is_cancelled().is_none(),
+            "and the totals of rows that are about to disappear"
+        );
+    }
+
+    /// An ordering whose folder sums were abandoned must not be remembered as the answer.
+    #[test]
+    fn an_interrupted_ordering_is_not_remembered() {
+        let asked = Arc::new(AtomicUsize::new(0));
+        let interrupt = Arc::new(AtomicBool::new(true));
+        let total = FolderSize {
+            bytes: 9,
+            incomplete: false,
+        };
+        let state = state_answering({
+            let (asked, interrupt) = (asked.clone(), interrupt.clone());
+            move |request| {
+                asked.fetch_add(1, Ordering::SeqCst);
+                assert!(
+                    request.folder_sizes.is_some(),
+                    "a sort by size asks for the totals"
+                );
+                let interrupted = interrupt.load(Ordering::SeqCst);
+                NodeInfoResponse {
+                    nodes: vec![SearchResultNode {
+                        path: "/folder".into(),
+                        metadata: SlabNodeMetadataCompact::none(),
+                    }],
+                    folder_sizes: vec![(!interrupted).then_some(total)],
+                    folder_sizes_interrupted: interrupted,
+                }
+            }
+        });
+        let results = [SlabIndex::new(7)];
+
+        // A search started while the folders were being added up, so the totals never arrived.
+        let (_, sizes) = state.fetch_sorted_nodes(&results, true, false);
+        assert_eq!(sizes, vec![None]);
+
+        // The same results again: reusing that answer would order folders by their inode size
+        // from here on, so the loop has to be asked a second time.
+        interrupt.store(false, Ordering::SeqCst);
+        let (_, sizes) = state.fetch_sorted_nodes(&results, true, false);
+        assert_eq!(sizes, vec![Some(total)]);
+        assert_eq!(asked.load(Ordering::SeqCst), 2);
+
+        // A complete answer is what gets remembered.
+        let (_, sizes) = state.fetch_sorted_nodes(&results, true, false);
+        assert_eq!(sizes, vec![Some(total)]);
+        assert_eq!(asked.load(Ordering::SeqCst), 2, "served from the cache");
+    }
 
     #[test]
     fn normalize_rejects_empty_input() {

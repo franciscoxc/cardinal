@@ -257,35 +257,39 @@ fn handle_event_watcher_events(
     }
 }
 
-/// Sizes for the directories among `nodes`, in the same order. Anything else gets `None`.
+/// Sizes for the directories among `nodes`, in the same order, and whether `token` gave way before
+/// all of them were added up. Anything that is not a directory gets `None`.
 ///
 /// Runs on the loop that also answers searches, so it is deliberately limited to what the caller
 /// asked for — one viewport's worth of rows. It is not throttled: these rows are on screen and the
 /// user is waiting for them, unlike the background walk that will fill in excluded folders later.
+/// What makes that affordable is `token`: the caller decides what is allowed to interrupt it, and
+/// the request type leaves no way to ask without one.
 fn compute_folder_sizes(
     cache: &mut SearchCache,
     slab_indices: &[SlabIndex],
     nodes: &[SearchResultNode],
+    token: CancellationToken,
     walk: Option<(CancellationToken, &Sender<WalkRequest>)>,
-) -> Vec<Option<FolderSize>> {
-    // ponytail-keep: bound to the running search, not noop. Ordering by size asks for every result
-    // at once, so this walks the union of their subtrees on the loop that also answers searches —
-    // and with a noop token nothing could stop it. A result set of folders near the sort limit made
-    // the app unresponsive for as long as the walk took, with the answer already worthless because
-    // the user had typed on.
-    let token = CancellationToken::current_search();
+) -> (Vec<Option<FolderSize>>, bool) {
     // One memo for the whole batch: sorting asks for every result at once, and a result set holds
     // nested folders often enough that re-walking each ancestor's descendants is the difference
     // between one traversal and one per level.
     let mut memo = SubtreeSizeMemo::default();
-    slab_indices
+    let mut interrupted = false;
+    let sizes = slab_indices
         .iter()
         .zip(nodes)
         .map(|(&index, node)| {
             if node.metadata.as_ref()?.r#type() != NodeFileType::Dir {
                 return None;
             }
-            let total = cache.subtree_size_memoized(index, &mut memo, token)?;
+            let Some(total) = cache.subtree_size_memoized(index, &mut memo, token) else {
+                // Said out loud rather than left as a missing total: "not looked at" and "holds
+                // nothing worth showing" are the same `None`, and only one is worth asking again.
+                interrupted = true;
+                return None;
+            };
             let excluded_roots = cache.excluded_roots_under(node.path.as_ref());
 
             if let Some((walk_token, request_tx)) = walk
@@ -309,7 +313,48 @@ fn compute_folder_sizes(
                 incomplete: total.unreadable || !excluded_roots.is_empty(),
             })
         })
-        .collect()
+        .collect();
+    (sizes, interrupted)
+}
+
+/// Rows for `request`, with what its folders hold when it asks for that too.
+fn answer_node_info(
+    cache: &mut SearchCache,
+    request: NodeInfoRequest,
+    walk_tx: &Sender<WalkRequest>,
+) {
+    let NodeInfoRequest {
+        slab_indices,
+        folder_sizes,
+        deep_folder_sizes,
+        response_tx,
+    } = request;
+    let nodes = cache.expand_file_nodes(&slab_indices);
+    let (folder_sizes, folder_sizes_interrupted) = match folder_sizes {
+        Some(token) => {
+            // ponytail-keep: the walks belong to the search, not to the request that queued them.
+            // They used to get a generation per request, so that rows scrolled away stopped
+            // costing disk — but the next request only names the rows that are new, so it also
+            // cancelled the walks of every row still on screen. Those rows are already loaded and
+            // are never asked for again: their totals froze as lower bounds, "+" and all, until
+            // the next search. Only a folder above an excluded path ever gets a walk, a handful
+            // in a whole index, so letting the ones scrolled past finish costs little.
+            let walk_token = deep_folder_sizes.then(CancellationToken::current_search);
+            compute_folder_sizes(
+                cache,
+                &slab_indices,
+                &nodes,
+                token,
+                walk_token.map(|token| (token, walk_tx)),
+            )
+        }
+        None => (Vec::new(), false),
+    };
+    let _ = response_tx.send(NodeInfoResponse {
+        nodes,
+        folder_sizes,
+        folder_sizes_interrupted,
+    });
 }
 
 /// Moves directories ahead of files, leaving the order inside each group untouched.
@@ -451,27 +496,7 @@ pub fn run_background_event_loop(
             }
             recv(node_info_rx) -> request => {
                 let request = request.expect("Node info channel closed");
-                let NodeInfoRequest {
-                    slab_indices,
-                    folder_sizes: want_folder_sizes,
-                    deep_folder_sizes,
-                    response_tx,
-                } = request;
-                let nodes = cache.expand_file_nodes(&slab_indices);
-                let folder_sizes = if want_folder_sizes {
-                    // A fresh generation cancels the walks queued for the previous viewport: rows
-                    // that scrolled away stop costing disk immediately.
-                    let walk_token = deep_folder_sizes.then(CancellationToken::new_folder_size);
-                    compute_folder_sizes(
-                        &mut cache,
-                        &slab_indices,
-                        &nodes,
-                        walk_token.map(|token| (token, &folder_size_request_tx)),
-                    )
-                } else {
-                    Vec::new()
-                };
-                let _ = response_tx.send(NodeInfoResponse { nodes, folder_sizes });
+                answer_node_info(&mut cache, request, &folder_size_request_tx);
             }
             recv(icon_viewport_rx) -> update => {
                 let update = update.expect("Icon viewport channel closed");
@@ -734,6 +759,125 @@ mod tests {
         fn db_path(&self) -> &Path {
             Path::new("db")
         }
+    }
+
+    /// The slab index of the directory named `name`, with the row a viewport would get for it.
+    fn folder_row(cache: &mut SearchCache, name: &str) -> (Vec<SlabIndex>, Vec<SearchResultNode>) {
+        let found = cache
+            .search_with_options(
+                name,
+                SearchOptions {
+                    case_insensitive: true,
+                },
+                CancellationToken::noop(),
+            )
+            .unwrap()
+            .nodes
+            .unwrap();
+        let folder = found
+            .into_iter()
+            .find(|index| cache.is_directory(*index))
+            .unwrap_or_else(|| panic!("the {name} directory"));
+        let nodes = cache.expand_file_nodes(&[folder]);
+        (vec![folder], nodes)
+    }
+
+    /// Scrolling on has to be able to take the loop back from a folder total.
+    ///
+    /// The first sum of a large folder reads the disk for every file under it, on the loop that
+    /// also hands out rows. Bound to the search alone, nothing but typing could interrupt it, so
+    /// the rows scrolled into view waited behind it.
+    #[test]
+    fn a_folder_sum_gives_way_to_a_newer_request_for_rows() {
+        let temp = tempdir::TempDir::new("folder_sum_gives_way").unwrap();
+        let dir = temp.path();
+        std::fs::create_dir_all(dir.join("docs/inner")).unwrap();
+        std::fs::write(dir.join("docs/a.txt"), vec![0u8; 700]).unwrap();
+        std::fs::write(dir.join("docs/inner/b.txt"), vec![0u8; 300]).unwrap();
+        let mut cache = SearchCache::walk_fs(dir);
+        let (indices, nodes) = folder_row(&mut cache, "docs");
+
+        let _generations = crate::hold_generations();
+        let token = CancellationToken::current_viewport();
+        let (sizes, interrupted) = compute_folder_sizes(&mut cache, &indices, &nodes, token, None);
+        assert_eq!(
+            sizes,
+            vec![Some(FolderSize {
+                bytes: 1000,
+                incomplete: false
+            })]
+        );
+        assert!(!interrupted);
+
+        // Rows were asked for again: these totals belong to the rows left behind.
+        let _ = CancellationToken::new_viewport();
+        let (sizes, interrupted) = compute_folder_sizes(&mut cache, &indices, &nodes, token, None);
+        assert_eq!(sizes, vec![None]);
+        assert!(
+            interrupted,
+            "a total that was not looked at must not pass for a folder with none"
+        );
+    }
+
+    /// A disk walk has to survive scrolling, and end with the search that asked for it.
+    ///
+    /// Each request used to open a walk generation of its own. The next request only names the
+    /// rows that are new, so it cancelled the walks of every row still on screen — rows that are
+    /// already loaded and never asked for again. Their totals stayed lower bounds for good.
+    #[test]
+    fn a_disk_walk_outlives_scrolling_and_ends_with_its_search() {
+        static NEVER_STOPPED: AtomicBool = AtomicBool::new(false);
+        let temp = tempdir::TempDir::new("disk_walk_outlives").unwrap();
+        let dir = temp.path();
+        std::fs::create_dir_all(dir.join("docs/caches")).unwrap();
+        std::fs::write(dir.join("docs/a.txt"), vec![0u8; 700]).unwrap();
+        std::fs::write(dir.join("docs/caches/blob.bin"), vec![0u8; 4000]).unwrap();
+        let excluded = [dir.join("docs/caches")];
+        let mut cache = SearchCache::walk_fs_with_walk_data(
+            &WalkData::new(dir, &excluded, &[], false, || false),
+            &NEVER_STOPPED,
+        )
+        .expect("walk was not cancelled");
+        let (indices, _) = folder_row(&mut cache, "docs");
+
+        let _generations = crate::hold_generations();
+        let (walk_tx, walk_rx) = crossbeam_channel::unbounded();
+        let (response_tx, response_rx) = crossbeam_channel::bounded(1);
+        answer_node_info(
+            &mut cache,
+            NodeInfoRequest {
+                slab_indices: indices,
+                folder_sizes: Some(CancellationToken::current_viewport()),
+                deep_folder_sizes: true,
+                response_tx,
+            },
+            &walk_tx,
+        );
+
+        let response = response_rx.try_recv().expect("the request is answered");
+        assert_eq!(
+            response.folder_sizes,
+            vec![Some(FolderSize {
+                bytes: 700,
+                // The excluded directory is not in the index, so this is a lower bound for now.
+                incomplete: true
+            })]
+        );
+        let walk = walk_rx.try_recv().expect("a walk for the excluded part");
+        assert_eq!(walk.roots, excluded);
+        assert_eq!(walk.indexed_bytes, 700);
+
+        let _ = CancellationToken::new_viewport();
+        assert!(
+            walk.cancellation_token.is_cancelled().is_some(),
+            "scrolling asks for new rows; the row this walk belongs to is still on screen"
+        );
+
+        let _ = CancellationToken::new_search();
+        assert!(
+            walk.cancellation_token.is_cancelled().is_none(),
+            "a new search replaces the rows, and the walk has nobody left to report to"
+        );
     }
 
     #[test]

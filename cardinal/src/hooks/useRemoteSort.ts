@@ -69,7 +69,7 @@ export type RemoteSortControls = {
   setSortThreshold: (value: number) => void;
   deepSortThreshold: number;
   setDeepSortThreshold: (value: number) => void;
-  /** The sort queued the disk walks for every result, so viewport requests must not restart them. */
+  /** The sort queued the disk walks for every result, so viewport requests must not queue them again. */
   deepSortOwnsWalks: boolean;
   canSort: boolean;
   isSorting: boolean;
@@ -77,7 +77,7 @@ export type RemoteSortControls = {
   sortButtonsDisabled: boolean;
   /** Set when every other column can be sorted but size cannot. */
   sizeSortDisabledTooltip: string | null;
-  /** Re-orders on the totals known right now, without restarting any walk. */
+  /** Re-orders on the totals known right now, without queuing any walk. */
   refreshSort: () => void;
   handleSortToggle: (key: SortKey) => void;
 };
@@ -202,9 +202,9 @@ export const useRemoteSort = ({
 
   useEffect(() => {
     // ponytail-keep: this run is the one allowed to queue the walks, and the refresh below is not.
-    // Each request opens a new folder-size generation that cancels the previous one, so re-running
-    // it on every progress event would abort the very walks whose progress triggered it — the
-    // totals would restart from the indexed sum forever and never finish.
+    // The refresh runs on every progress event, so if it queued them too, each report from a walk
+    // would add another walk for every folder — starting over from the indexed sum, behind the
+    // ones still running. The totals would never settle.
     runSort(deepSortActive);
   }, [runSort, deepSortActive]);
 

@@ -97,6 +97,22 @@ describe('useFileSearch', () => {
     expect(mockedInvoke).not.toHaveBeenCalledWith('search', expect.anything());
   });
 
+  it('tells the engine to stop when the field is cleared, since nothing else will', async () => {
+    mockSearchSuccess([1, 2, 3] as SlabIndex[]);
+    const { result } = await renderWithResults();
+
+    mockedInvoke.mockClear();
+    await act(async () => {
+      result.current.queueSearch('', { immediate: true });
+    });
+
+    // The empty query is answered here without asking, so the search it replaces — a content
+    // search can run for minutes — would otherwise go on with nobody waiting for it.
+    await waitFor(() => expect(result.current.state.results).toEqual([]));
+    expect(mockedInvoke).toHaveBeenCalledWith('cancel_search');
+    expect(mockedInvoke).not.toHaveBeenCalledWith('search', expect.anything());
+  });
+
   it('asks the engine to group folders, and honours the preference when it is off', async () => {
     mockSearchSuccess([1, 2, 3] as SlabIndex[]);
     const { result } = await renderWithResults();

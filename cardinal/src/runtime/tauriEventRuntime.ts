@@ -200,7 +200,12 @@ export const subscribeQuickLookKeydown = (
 
 export const subscribeFolderSizeUpdate = (
   listener: Listener<readonly FolderSizeUpdatePayload[]>,
-): UnlistenFn => subscribe(folderSizeListeners, listener);
+): UnlistenFn => {
+  // Like every other subscriber here. Without it this one only heard anything because the icon
+  // subscription happened to start the runtime first.
+  void initializeTauriEventRuntime();
+  return subscribe(folderSizeListeners, listener);
+};
 
 export const subscribeWindowDragDrop = (listener: Listener<WindowDragDropEvent>): UnlistenFn => {
   void initializeTauriEventRuntime();
