@@ -3310,6 +3310,39 @@ mod tests {
         );
     }
 
+    /// A cancelled content search has to let go at once, not after it has walked the index.
+    ///
+    /// Only the reading of each file used to check for cancellation; the side that hands files to
+    /// the pool did not, so it went on building a path for every node left. On a real index that
+    /// was ten seconds during which the next search could not start.
+    #[test]
+    fn a_cancelled_content_search_stops_handing_out_files() {
+        let temp_dir = TempDir::new("content_candidates_cancelled").unwrap();
+        let dir = temp_dir.path();
+        fs::create_dir_all(dir.join("notes")).unwrap();
+        fs::write(dir.join("notes/a.txt"), b"x").unwrap();
+        fs::write(dir.join("notes/b.txt"), b"x").unwrap();
+        fs::write(dir.join("c.txt"), b"x").unwrap();
+
+        let cache = SearchCache::walk_fs(dir);
+        let everything = cache.search_empty(CancellationToken::noop()).unwrap();
+
+        // Still wanted: every file is handed out, and no directory.
+        let live: Vec<_> = cache
+            .content_candidates(everything.clone(), CancellationToken::noop())
+            .collect();
+        assert_eq!(live.len(), 3, "the three files, not the folders: {live:?}");
+
+        // Superseded by a newer search, which is all cancelling is.
+        let token = CancellationToken::new_search();
+        let _ = CancellationToken::new_search();
+        assert_eq!(
+            cache.content_candidates(everything, token).count(),
+            0,
+            "a search nobody is waiting for must not build another path"
+        );
+    }
+
     #[test]
     fn content_filter_matches_across_chunks() {
         let temp_dir = TempDir::new("content_filter_matches_across_chunks").unwrap();
