@@ -3352,6 +3352,77 @@ mod tests {
         );
     }
 
+    /// What the index recorded as a file may not be one by the time it is searched.
+    ///
+    /// Opening a FIFO for reading waits for a writer, and a read from a socket waits for data;
+    /// nothing can interrupt either. One such entry was enough to hang a content search for good,
+    /// and with it the loop that answers every other search.
+    #[test]
+    fn content_search_leaves_alone_what_is_no_longer_a_regular_file() {
+        let temp_dir = TempDir::new("content_not_a_file").unwrap();
+        let dir = temp_dir.path();
+        let path = dir.join("was-a-file.txt");
+        fs::write(&path, b"needle").unwrap();
+        fs::write(dir.join("still-a-file.txt"), b"needle").unwrap();
+
+        // Indexed while it is a regular file, which is what the index goes on believing.
+        let mut cache = SearchCache::walk_fs(dir);
+        fs::remove_file(&path).unwrap();
+        let made = std::process::Command::new("mkfifo")
+            .arg(&path)
+            .status()
+            .expect("mkfifo runs");
+        assert!(made.success());
+
+        // On another thread, so that a search which does block fails this test instead of
+        // hanging the whole run.
+        let (answer_tx, answer_rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = answer_tx.send(cache.search("content:needle").map(|hits| hits.len()));
+        });
+        let answer = answer_rx.recv_timeout(std::time::Duration::from_secs(10));
+        if answer.is_err() {
+            // Let the blocked reader go: with a reader waiting, opening for writing returns.
+            let _ = fs::OpenOptions::new().write(true).open(&path);
+        }
+
+        assert_eq!(
+            answer.expect("the search has to come back").unwrap(),
+            1,
+            "the regular file matches; the pipe is never opened"
+        );
+    }
+
+    /// Nothing under /dev is read, even where it passes for a regular file.
+    ///
+    /// `/dev/fd/N` mirrors the descriptors of whoever looks. One that is a regular file is a file
+    /// this very process has open, and reading it there reads through the original's cursor.
+    #[test]
+    fn content_is_never_read_through_dev() {
+        use std::{io::Seek, os::fd::AsRawFd};
+
+        let temp_dir = TempDir::new("content_through_dev").unwrap();
+        let path = temp_dir.path().join("held-open.txt");
+        fs::write(&path, b"a needle in a file this process holds open").unwrap();
+        let mut held = fs::File::open(&path).unwrap();
+        let mirror = PathBuf::from(format!("/dev/fd/{}", held.as_raw_fd()));
+        assert!(
+            fs::symlink_metadata(&mirror).unwrap().file_type().is_file(),
+            "the mirror looks like a regular file, so its type alone would let it through"
+        );
+
+        assert_eq!(crate::content_snippet(&mirror, "needle", false), None);
+        assert_eq!(
+            held.stream_position().unwrap(),
+            0,
+            "and the cursor of the file behind it has not moved"
+        );
+        assert!(
+            crate::content_snippet(&path, "needle", false).is_some(),
+            "by its own path the file is searched as usual"
+        );
+    }
+
     #[test]
     fn content_filter_matches_across_chunks() {
         let temp_dir = TempDir::new("content_filter_matches_across_chunks").unwrap();

@@ -928,9 +928,13 @@ impl SearchCache {
     ) -> Option<bool> {
         token.is_cancelled()?;
 
-        if let Some(bytes) = dataless_size(path) {
-            SKIPPED_CLOUD.note(bytes);
-            return Some(false);
+        match unread_reason(path) {
+            Some(Unread::InTheCloud(bytes)) => {
+                SKIPPED_CLOUD.note(bytes);
+                return Some(false);
+            }
+            Some(Unread::NotAFile) => return Some(false),
+            None => {}
         }
 
         let Ok(mut file) = File::open(path) else {
@@ -1125,9 +1129,18 @@ impl SkippedCloud {
     }
 }
 
-/// The size of the file when it has no local copy, so opening it would make macOS fetch it.
+/// Why a file's contents are left unread, when they are. Decided without opening the file.
+enum Unread {
+    /// It has no local copy, so opening it would make macOS fetch it. Carries the size the
+    /// placeholder reports.
+    InTheCloud(u64),
+    /// Not something to read from: a device, a pipe, a socket, or anything under `/dev`.
+    NotAFile,
+}
+
+/// Looks at a path before a content search opens it.
 ///
-/// ponytail-keep: checked with `symlink_metadata`, which reads the flag without materialising
+/// ponytail-keep: checked with `symlink_metadata`, which reads the flags without materialising
 /// anything — opening the file is what triggers the download. Searching content over a home folder
 /// synced with iCloud would otherwise pull every PDF, video and archive that is not on the disk,
 /// silently and in the background, just because someone typed a word. This project already fixed
@@ -1139,14 +1152,33 @@ impl SkippedCloud {
 /// It answers and nothing else. Counting the file as skipped is the filter's job: the snippet
 /// lookup asks the same question from another thread, for rows already on screen, and when it
 /// counted too it inflated the total of whatever search happened to be running.
-fn dataless_size(path: &Path) -> Option<u64> {
+fn unread_reason(path: &Path) -> Option<Unread> {
     use std::os::macos::fs::MetadataExt;
     // SF_DATALESS from <sys/stat.h>: set on a placeholder whose contents live in the cloud.
     const SF_DATALESS: u32 = 0x4000_0000;
+
+    // ponytail-keep: the type the index recorded is not trusted here. It was true when the tree
+    // was walked. `/dev/fd/N` is whatever descriptor N happens to be in the process that asks: a
+    // regular file in the one that indexed, a socket in the one that searches — and a read from a
+    // socket or a pipe waits for data that never comes. Nothing interrupts that read, so a single
+    // such entry left the search loop waiting on its worker for good: seen in a live app, one
+    // thread in `read()` and every later search stuck on "Searching…" until it was restarted.
+    // Opening a FIFO blocks even sooner, in `open()`.
+    //
+    // So nothing under /dev is read at all — a descriptor there that does look like a regular
+    // file is one of the app's own, and reading it moves that file's cursor — and anywhere else
+    // only what is a regular file right now. The `lstat` below was already being made for the
+    // cloud check, so this costs nothing more.
+    if path.starts_with("/dev") {
+        return Some(Unread::NotAFile);
+    }
     let meta = std::fs::symlink_metadata(path).ok()?;
+    if !meta.file_type().is_file() {
+        return Some(Unread::NotAFile);
+    }
     // A placeholder still reports the real size, which is what makes it possible to tell someone
     // how much downloading these would cost before they ask for it.
-    (meta.st_flags() & SF_DATALESS != 0).then_some(meta.len())
+    (meta.st_flags() & SF_DATALESS != 0).then_some(Unread::InTheCloud(meta.len()))
 }
 
 pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Option<String> {
@@ -1159,7 +1191,7 @@ pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Optio
         return None;
     }
 
-    if dataless_size(path).is_some() {
+    if unread_reason(path).is_some() {
         return None;
     }
 

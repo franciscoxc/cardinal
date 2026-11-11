@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Stop a content search from hanging the app for good. `/dev/fd/N` mirrors the descriptors of whichever process looks at it — a regular file when the index was built, a socket by the time it is searched — and a read from a socket waits for data that never comes. Nothing can interrupt that read, so a single such entry left the search loop waiting on its worker, and every search after it showed "Searching…" until the app was restarted. Any content search with nothing else to narrow it reached it eventually. Content is no longer read from anything under `/dev`, nor from anything that is not a regular file at the moment it is opened.
 - Let go of a cancelled content search at once. Each file checked for cancellation before it was read, but the side handing files to the pool did not, so a search that had already been replaced still walked every node it had left. Measured on a 6.28M-node index: 10.3 s before the next search could start, 24–69 ms now.
 - Wait for a pause before searching what is typed into "Contains". The field shared a handler with the type dropdown, which searches at once because a pick is a decision — so every letter started a content search of its own, and with nothing else in the bar that is a read of the whole disk.
 - Stop the search when the field is cleared. The empty query is answered without asking the engine, which also meant nothing told the engine to stop: the pane said to start typing while a content search went on reading the disk on every core.
