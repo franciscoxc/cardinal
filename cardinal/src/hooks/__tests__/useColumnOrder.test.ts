@@ -67,13 +67,4 @@ describe('useColumnOrder', () => {
 
     expect(result.current.hiddenColumns).toEqual(['size']);
   });
-
-  it('resetting brings every column back', () => {
-    const { result } = renderHook(() => useColumnOrder());
-    act(() => result.current.toggleColumn('path'));
-    act(() => result.current.resetOrder());
-
-    expect(result.current.hiddenColumns).toEqual([]);
-    expect(result.current.columnOrder).toEqual(DEFAULT_COLUMN_ORDER);
-  });
 });

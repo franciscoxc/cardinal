@@ -111,10 +111,5 @@ export function useColumnOrder() {
     [hidden, setHidden],
   );
 
-  const resetOrder = useCallback(() => {
-    setOrder(DEFAULT_COLUMN_ORDER);
-    setHidden([]);
-  }, [setHidden, setOrder]);
-
-  return { columnOrder: order, hiddenColumns: hidden, moveColumn, toggleColumn, resetOrder };
+  return { columnOrder: order, hiddenColumns: hidden, moveColumn, toggleColumn };
 }
