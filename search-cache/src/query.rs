@@ -928,7 +928,8 @@ impl SearchCache {
     ) -> Option<bool> {
         token.is_cancelled()?;
 
-        if is_dataless(path) {
+        if let Some(bytes) = dataless_size(path) {
+            SKIPPED_CLOUD.note(bytes);
             return Some(false);
         }
 
@@ -1124,7 +1125,7 @@ impl SkippedCloud {
     }
 }
 
-/// Whether the file has no local copy, so opening it would make macOS fetch it.
+/// The size of the file when it has no local copy, so opening it would make macOS fetch it.
 ///
 /// ponytail-keep: checked with `symlink_metadata`, which reads the flag without materialising
 /// anything — opening the file is what triggers the download. Searching content over a home folder
@@ -1134,20 +1135,18 @@ impl SkippedCloud {
 ///
 /// The cost is honest and worth stating: matches inside files that are not downloaded are not
 /// found. That beats spending someone's bandwidth without asking.
-fn is_dataless(path: &Path) -> bool {
+///
+/// It answers and nothing else. Counting the file as skipped is the filter's job: the snippet
+/// lookup asks the same question from another thread, for rows already on screen, and when it
+/// counted too it inflated the total of whatever search happened to be running.
+fn dataless_size(path: &Path) -> Option<u64> {
     use std::os::macos::fs::MetadataExt;
     // SF_DATALESS from <sys/stat.h>: set on a placeholder whose contents live in the cloud.
     const SF_DATALESS: u32 = 0x4000_0000;
-    let Ok(meta) = std::fs::symlink_metadata(path) else {
-        return false;
-    };
-    if meta.st_flags() & SF_DATALESS == 0 {
-        return false;
-    }
+    let meta = std::fs::symlink_metadata(path).ok()?;
     // A placeholder still reports the real size, which is what makes it possible to tell someone
     // how much downloading these would cost before they ask for it.
-    SKIPPED_CLOUD.note(meta.len());
-    true
+    (meta.st_flags() & SF_DATALESS != 0).then_some(meta.len())
 }
 
 pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Option<String> {
@@ -1160,7 +1159,7 @@ pub fn content_snippet(path: &Path, term: &str, case_insensitive: bool) -> Optio
         return None;
     }
 
-    if is_dataless(path) {
+    if dataless_size(path).is_some() {
         return None;
     }
 
