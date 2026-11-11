@@ -33,7 +33,7 @@
     "content": {
       "label": "Contains",
       "hint": "(search inside)",
-      "help": "Several words: all of them must appear. Between \"quotes\": the exact phrase.",
+      "help": "Several words: all of them must appear. Between \"quotes\": the exact phrase. It reads text as it is stored, so it cannot see inside PDF or Word files, which keep theirs compressed.",
       "custom": "set in the search bar"
     },
     "clear": "Clear"

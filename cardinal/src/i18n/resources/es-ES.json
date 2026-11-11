@@ -33,7 +33,7 @@
     "content": {
       "label": "Contiene",
       "hint": "(buscar dentro)",
-      "help": "Varias palabras: tienen que aparecer todas. Entre \"comillas\": la frase exacta.",
+      "help": "Varias palabras: tienen que aparecer todas. Entre \"comillas\": la frase exacta. Lee el texto tal como está guardado: no ve dentro de PDF ni de Word, que lo guardan comprimido.",
       "custom": "definido en la barra de búsqueda"
     },
     "clear": "Borrar"

@@ -33,7 +33,7 @@
     "content": {
       "label": "Enthält",
       "hint": "(darin suchen)",
-      "help": "Mehrere Wörter: alle müssen vorkommen. In \"Anführungszeichen\": die genaue Wortfolge.",
+      "help": "Mehrere Wörter: alle müssen vorkommen. In \"Anführungszeichen\": die genaue Wortfolge. Gelesen wird der Text so, wie er gespeichert ist: In PDF- und Word-Dateien, die ihn komprimiert ablegen, findet die Suche nichts.",
       "custom": "in der Suchleiste festgelegt"
     },
     "clear": "Löschen"

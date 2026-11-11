@@ -33,7 +33,7 @@
     "content": {
       "label": "Contiene",
       "hint": "(cerca dentro)",
-      "help": "Più parole: devono comparire tutte. Tra \"virgolette\": la frase esatta.",
+      "help": "Più parole: devono comparire tutte. Tra \"virgolette\": la frase esatta. Legge il testo così com'è salvato: non vede dentro i PDF né i file Word, che lo tengono compresso.",
       "custom": "impostato nella barra di ricerca"
     },
     "clear": "Cancella"

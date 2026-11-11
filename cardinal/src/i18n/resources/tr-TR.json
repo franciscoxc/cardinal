@@ -33,7 +33,7 @@
     "content": {
       "label": "İçerir",
       "hint": "(içinde ara)",
-      "help": "Birden çok kelime: hepsi geçmeli. \"Tırnak\" içinde: tam ifade.",
+      "help": "Birden çok kelime: hepsi geçmeli. \"Tırnak\" içinde: tam ifade. Metni kaydedildiği hâliyle okur: içeriği sıkıştırarak saklayan PDF ve Word dosyalarının içini göremez.",
       "custom": "arama çubuğunda ayarlandı"
     },
     "clear": "Temizle"

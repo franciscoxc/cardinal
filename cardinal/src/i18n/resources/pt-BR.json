@@ -33,7 +33,7 @@
     "content": {
       "label": "Contém",
       "hint": "(buscar dentro)",
-      "help": "Várias palavras: todas precisam aparecer. Entre \"aspas\": a frase exata.",
+      "help": "Várias palavras: todas precisam aparecer. Entre \"aspas\": a frase exata. Lê o texto como está gravado: não enxerga dentro de PDF nem de Word, que o guardam compactado.",
       "custom": "definido na barra de busca"
     },
     "clear": "Limpar"

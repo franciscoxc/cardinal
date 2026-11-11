@@ -33,7 +33,7 @@
     "content": {
       "label": "Contient",
       "hint": "(chercher dedans)",
-      "help": "Plusieurs mots : tous doivent apparaître. Entre « guillemets » : la phrase exacte.",
+      "help": "Plusieurs mots : tous doivent apparaître. Entre « guillemets » : la phrase exacte. Le texte est lu tel qu'il est enregistré : la recherche ne voit pas dans les PDF ni les fichiers Word, qui le stockent compressé.",
       "custom": "défini dans la barre de recherche"
     },
     "clear": "Effacer"
