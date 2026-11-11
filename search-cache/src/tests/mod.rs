@@ -1,15 +1,15 @@
 #![allow(clippy::too_many_lines)]
 
 mod prelude {
+    pub(super) use super::support::TempDir;
     pub(super) use crate::SearchCache;
     pub(super) use fswalk::NodeFileType;
     pub(super) use jiff::Timestamp;
     pub(super) use search_cancel::CancellationToken;
     pub(super) use std::{fs, path::PathBuf};
-    pub(super) use tempdir::TempDir;
 }
 
-mod support;
+pub(crate) mod support;
 
 mod cache_flow;
 mod date_edges;

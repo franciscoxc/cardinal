@@ -1,7 +1,57 @@
 use crate::{SearchCache, SlabIndex, SlabNodeMetadataCompact};
 use fswalk::{NodeFileType, NodeMetadata};
 use jiff::{civil::Date, tz::TimeZone};
-use std::num::NonZeroU64;
+use std::{
+    fs, io,
+    num::NonZeroU64,
+    path::{Path, PathBuf},
+    process,
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+/// A temporary directory named `<prefix>.<pid>.<n>`, removed on drop.
+// ponytail-keep: the walk indexes the ancestors of its root, so the temp dir's own name is
+// searchable. `tempdir` ends it in 12 random letters and digits: one run in 62 it ended in "a",
+// `a/**` also matched the temp dir and returned its child `a`; with "oo" in it, `oo` counted one
+// hit too many. Digits cannot complete any word these tests search for.
+pub(crate) struct TempDir(PathBuf);
+
+impl TempDir {
+    pub(crate) fn new(prefix: &str) -> io::Result<Self> {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        loop {
+            let n = NEXT.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!("{prefix}.{}.{n}", process::id()));
+            match fs::create_dir(&path) {
+                Ok(()) => return Ok(Self(path)),
+                // Left behind by a killed run that had the same pid.
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    pub(crate) fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+#[test]
+fn a_temp_dir_adds_nothing_to_its_name_that_a_search_could_match() {
+    let dir = TempDir::new("named").unwrap();
+    let name = dir.path().file_name().unwrap().to_str().unwrap();
+    let added = name.strip_prefix("named.").unwrap();
+    assert!(
+        added.chars().all(|c| c.is_ascii_digit() || c == '.'),
+        "{name}"
+    );
+}
 
 pub(super) const SECONDS_PER_DAY: i64 = 24 * 60 * 60;
 

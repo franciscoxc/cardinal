@@ -1308,13 +1308,12 @@ fn require_folder_expr(expr: Expr) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::CONTENT_BUFFER_BYTES;
+    use crate::{query::CONTENT_BUFFER_BYTES, tests::support::TempDir};
     use fswalk::NodeFileType;
     use std::{
         fs,
         path::{Component, Path, PathBuf},
     };
-    use tempdir::TempDir;
 
     fn depth(path: &Path) -> usize {
         path.components()
