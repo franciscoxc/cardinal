@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+- Let go of a cancelled content search at once. Each file checked for cancellation before it was read, but the side handing files to the pool did not, so a search that had already been replaced still walked every node it had left. Measured on a 6.28M-node index: 10.3 s before the next search could start, 24–69 ms now.
+- Wait for a pause before searching what is typed into "Contains". The field shared a handler with the type dropdown, which searches at once because a pick is a decision — so every letter started a content search of its own, and with nothing else in the bar that is a read of the whole disk.
+- Stop the search when the field is cleared. The empty query is answered without asking the engine, which also meant nothing told the engine to stop: the pane said to start typing while a content search went on reading the disk on every core.
+- Show rows without waiting for what their folders hold. The total travelled inside the row, and the first sum of a large folder reads the disk for every file under it — 28 s for a home folder, measured — so one such folder in view left the whole list blank for that long. Totals are now asked for once the rows are on screen.
+- Let scrolling interrupt those sums. Only a new search could, so rows scrolled into view waited behind them. Asking for more rows now takes the loop back within 3–12 ms, measured, and the folders that had not been reached are asked for again; what was already read is kept.
+- Keep disk walks running while you scroll. Every request for rows opened a new walk generation, which also cancelled the walks of rows still on screen — rows that are already loaded and never asked for again, so their totals stayed lower bounds, "+" and all, until the next search. Walks now end with the search that asked for them.
+- Do not remember an ordering whose folder sums were interrupted. A folder whose sum was abandoned looks exactly like a row with no total, so the next sort of the same results ordered folders by the size of their inode. Running the same search again while a sort by size was still adding up was enough.
+- Make a failed update leave a working app, and say so. The installer runs after the app has quit; where it could not write — `/Applications` on an account that is not an administrator — it died on its first step and the app never came back. The app now checks before quitting and explains, with the disk image left open for the drag. The swap itself is two renames instead of deleting the old bundle first, so there is a whole app at its path at every step, and anything that fails afterwards brings the old one back.
+- Require this project's signature on an update, not just a signature. `codesign --verify` passes for a bundle anybody signed, and a file fetched with curl carries no quarantine flag, so Gatekeeper never looked either.
+- Give up on a download that stops moving, after 30 seconds without data, instead of waiting for ever with nothing on screen. One update check at a time, however often the menu is clicked, and the download button says how much it is about to fetch.
+- Open the releases page from Help → Releases. It ran the update check, like the item in the app menu, so there was nowhere to read what had changed.
+- Say in the "Contains" tooltip that it reads text as it is stored, so it cannot see inside PDF or Word files, which keep theirs compressed.
+- Count a file skipped for not being downloaded once, from the search that skipped it. Looking up the snippet of a visible row counted it again, inflating the total of whichever search was running.
+- Drop a column reset nothing called and an empty branch left behind by an earlier change.
+
 ## 0.5.1 — 2026-09-01
 - Put the downloaded disk image in the Trash once the update is installed, instead of leaving it in Downloads forever. The Trash rather than `rm`: if an update turns out badly, that file is the one thing that gets you back to the version before it. It is moved after the volume is unmounted, since moving the file backing a mounted image is how you corrupt it.
 - Drop two functions nothing called: `SearchCache::rescan`, superseded by `rescan_with_walk_data`, and `scan_path_nonrecursive`, which had been silenced with `#[allow(dead_code)]` rather than removed.
