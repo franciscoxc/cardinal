@@ -8,6 +8,7 @@
   <p>
     Signed and notarized · Apple silicon · macOS 12+
   </p>
+  <p><a href="https://franxc.com/cardinal/">franxc.com/cardinal</a> — the page for this fork's work on the interface</p>
   <img src="doc/pub/UI.gif" alt="Cardinal UI preview" width="720">
 </div>
 
